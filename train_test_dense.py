@@ -9,7 +9,7 @@ from keras.layers import Dense, Conv3D, Dropout, Flatten, Input, concatenate, Re
 from keras.layers.recurrent import LSTM
 from nibabel import load as load_nii
 from utils import color_codes, fold_train_test_val, get_biggest_region
-# from itertools import izip
+from itertools import izip
 from data_creation import load_patch_batch_train, get_cnn_centers
 from data_creation import load_patch_batch_generator_test
 from data_manipulation.generate_features import get_mask_voxels
@@ -29,13 +29,13 @@ from keras.applications.imagenet_utils import _obtain_input_shape
 import keras.backend as K
 
 from subpixel import SubPixelUpscaling
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def parse_inputs():
     # I decided to separate this function, for easier acces to the command line parameters
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
-    parser.add_argument('-f', '--folder', dest='dir_name', default='/home/mariano/DATA/Brats17CBICA/')
+    parser.add_argument('-f', '--folder', dest='dir_name', default='/media/lele/DATA/spie/temp')
     parser.add_argument('-F', '--n-fold', dest='folds', type=int, default=5)
     parser.add_argument('-i', '--patch-width', dest='patch_width', type=int, default=13)
     parser.add_argument('-k', '--kernel-size', dest='conv_width', nargs='+', type=int, default=3)
@@ -308,18 +308,21 @@ def main():
         options['use_t1ce']]
     )
 
-    print(c['c'] + '[' + strftime("%H:%M:%S") + '] ' + 'Starting cross-validation' + c['nc'])
+    print(c['c'] + '[' + strftime("%H:%M:%S") + '] ')
     # N-fold cross validation main loop (we'll do 2 training iterations with testing for each patient)
     data_names, label_names = get_names_from_path(options)
     folds = options['folds']
-    train_data, train_labels, val_data, val_labels, test_data, test_labels = fold_train_test_val(data_names, label_names,val_data=0.25)
+    # (train_data, train_labels, val_data, val_labels, test_data, test_labels) = fold_train_test_val(data_names, label_names,val_data=0.25)
+    datas  = fold_train_test_val(data_names, label_names,val_data=0.25)
+    train_data, train_labels, val_data, val_labels, test_data, test_labels= datas[0], datas[1], datas[2], datas[3], datas[4], datas[5]
+    dsc_results = list()
     dsc_results = list()
     print(c['c'] + '[' + strftime("%H:%M:%S") + ']  ' + c['nc'] + c['g'] +
           'Number of training/validation/testing images (%d=%d/%d=%d/%d)'
           % (len(train_data), len(train_labels), len(val_data), len(val_labels), len(test_data)) + c['nc'])
     # Prepare the data relevant to the leave-one-out (subtract the patient from the dataset and set the path)
     # Also, prepare the network
-    net_name = os.path.join(path, 'baseline-brats2017.fold%d' % i + sufix + 'mdl')
+    net_name = os.path.join(path, 'dense.mdl')
 
     # First we check that we did not train for that patient, in order to save time
     try:
@@ -474,7 +477,7 @@ def main():
     for p, gt_name in zip(test_data, test_labels):
         p_name = p[0].rsplit('/')[-2]
         patient_path = '/'.join(p[0].rsplit('/')[:-1])
-        outputname = os.path.join(patient_path, 'deep-brats17' + sufix + 'test.nii.gz')
+        outputname = os.path.join(patient_path, 'dense_test.nii.gz')
         gt_nii = load_nii(gt_name)
         gt = np.copy(gt_nii.get_data()).astype(dtype=np.uint8)
         try:
@@ -508,7 +511,7 @@ def main():
                 roi = np.zeros_like(roi).astype(dtype=np.uint8)
                 roi[x, y, z] = tumor
                 roi_nii.get_data()[:] = roi
-                roiname = os.path.join(patient_path, 'deep-brats17' + sufix + 'test.roi.nii.gz')
+                roiname = os.path.join(patient_path, 'dense'  + '_test.roi.nii.gz')
                 roi_nii.to_filename(roiname)
 
             y_pred = np.argmax(y_pr_pred, axis=1)

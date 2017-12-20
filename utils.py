@@ -68,19 +68,14 @@ def nfold_cross_validation(data_list, labels_list, n=1, random_state=42, val_dat
 def fold_train_test_val(data_list, labels_list, random_state=42, val_data=None):
     np.random.seed(random_state)
     shuffled_indices = np.random.permutation(xrange(len(data_list)))
-    print shuffled_indices
-    val_len = int(len(tr_data) * val_data) if val_data is not None else None
+    labels = labels_list[[idx for idx in shuffled_indices ]]
+    datas = data_list[[idx for idx in shuffled_indices ]]
 
-    indices = shuffled_indices[i::n]
-    tst_data = data_list[indices]
-    tst_labels = labels_list[indices]
-    tr_labels = labels_list[[idx for idx in shuffled_indices if idx not in indices]]
-    tr_data = data_list[[idx for idx in shuffled_indices if idx not in indices]]
-    val_len = int(len(tr_data) * val_data) if val_data is not None else None
-    if val_data is not None:
-        yield tr_data[val_len:], tr_labels[val_len:], tr_data[:val_len], tr_labels[:val_len], tst_data, tst_labels
-    else:
-        yield tr_data, tr_labels, tst_data, tst_labels
+
+    val_len = int(len(data_list) * val_data) if val_data is not None else None
+
+    return [datas[val_len:], labels[val_len:], datas[:val_len], labels[:val_len], datas[:val_len], labels[:val_len]]
+    
 
 
 def get_biggest_region(labels):
@@ -99,5 +94,5 @@ def get_patient_info(p):
 
 
 
-shuffled_indices = np.random.permutation(xrange(100))
-print shuffled_indices
+# shuffled_indices = np.random.permutation(xrange(100))
+# print shuffled_indices
