@@ -17,4 +17,4 @@ DATA structure:
 
 
 
-run: train_test_dense.py
+run:python train_test_dense.py -f data_folder
