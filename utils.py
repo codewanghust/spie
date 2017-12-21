@@ -65,6 +65,7 @@ def nfold_cross_validation(data_list, labels_list, n=1, random_state=42, val_dat
             yield tr_data[val_len:], tr_labels[val_len:], tr_data[:val_len], tr_labels[:val_len], tst_data, tst_labels
         else:
             yield tr_data, tr_labels, tst_data, tst_labels
+
 def fold_train_test_val(data_list, labels_list, random_state=42, val_data=None):
     np.random.seed(random_state)
     shuffled_indices = np.random.permutation(xrange(len(data_list)))

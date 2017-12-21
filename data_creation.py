@@ -12,6 +12,25 @@ from numpy import logical_not as log_not
 import keras
 
 
+def get_label_patches(label_list, centers, size):
+    label_patch = []
+    for i in range(len(label_list)):
+        temp = get_patches(load_nii(label_list[i]).get_data(), centers[i], size)
+        label_patch.append(np.array(temp))
+    return label_patch
+
+
+def to_nparray(list):
+    ret = None
+    for item in list:
+        if len(item) != 0:
+            if ret is None:
+                ret = item
+            else:
+                ret = np.concatenate((ret, item))
+    return ret
+
+
 def clip_to_roi(images, roi):
     # We clip with padding for patch extraction
     min_coord = np.stack(np.nonzero(roi.astype(dtype=np.bool))).min(axis=1)
@@ -61,6 +80,17 @@ def centers_and_idx(centers, n_images):
     return centers, idx
 
 
+# def center_crop_3d_ignore_first_last_dim(data, crop_size):
+#     _, x, y, z, _ = data.shape
+
+
+def center_crop_3d_cube_ignore_first_liast_dim(data, size):
+    c = data.shape[1]
+    offset = (c - size) / 2
+    return data[:, offset: offset + size, offset: offset + size, offset: offset + size, :]
+
+
+
 def labels_generator(image_names):
     for patient in image_names:
         yield np.squeeze(load_nii(patient).get_data())
@@ -77,15 +107,18 @@ def get_xy(
         split,
         iseg,
         experimental,
-        datatype
+        datatype,
+        pred_size
 ):
     n_images = len(image_list)
     centers, idx = centers_and_idx(batch_centers, n_images)
     x = get_patches_list(image_list, centers, size, preload)
     x = np.concatenate(filter(lambda z: z.any(), x)).astype(dtype=datatype)
     x[idx] = x
-    y = [np.array([l[c] for c in lc]) for l, lc in izip(labels_generator(label_names), centers)]
-    y = np.concatenate(y)
+    # y = [np.array([l[c] for c in lc]) for l, lc in izip(labels_generator(label_names), centers)]
+    # y = np.concatenate(y)
+    y = get_label_patches(label_names, centers, size)
+    y = to_nparray(y)
     y[idx] = y
     if split:
         if iseg:
@@ -111,21 +144,26 @@ def get_xy(
             y = y_labels + y_cat
         else:
             y = [
-                keras.utils.to_categorical(
-                    np.copy(y).astype(dtype=np.bool),
-                    num_classes=2
-                ),
-                keras.utils.to_categorical(
-                    np.array(y > 0).astype(dtype=np.int8) + np.array(y > 1).astype(dtype=np.int8),
-                    num_classes=3
-                ),
-                keras.utils.to_categorical(
-                    y,
-                    num_classes=nlabels
-                )
+
+                center_crop_3d_cube_ignore_first_liast_dim(
+                    keras.utils.to_categorical(np.copy(y).astype(dtype=np.bool),
+                                               num_classes=2).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 2]),
+                    pred_size),
+
+                center_crop_3d_cube_ignore_first_liast_dim(
+                    keras.utils.to_categorical(np.array(y > 0).astype(dtype=np.int8) + np.array(y > 1).astype(dtype=np.int8),
+                                               num_classes=3).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
+                    pred_size),
+
+                center_crop_3d_cube_ignore_first_liast_dim(
+                    keras.utils.to_categorical(y,
+                                               num_classes=nlabels).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], nlabels]),
+                    pred_size)
+
             ]
     else:
         y = keras.utils.to_categorical(np.copy(y).astype(dtype=np.bool), num_classes=2)
+    x = np.transpose(x, axes=[0, 2, 3, 4, 1])
     return x, y
 
 
@@ -134,6 +172,7 @@ def load_patch_batch_train(
         label_names,
         centers,
         batch_size,
+        pred_size,
         size,
         # fc_shape,
         nlabels,
@@ -143,7 +182,7 @@ def load_patch_batch_train(
         split=False,
         iseg=False,
         experimental=False,
-        generator=True
+        generator=True,
 ):
     image_list = [load_norm_list(patient)
                   for patient in image_names] if preload or not generator else image_names
@@ -161,7 +200,8 @@ def load_patch_batch_train(
                 preload=preload,
                 split=split,
                 iseg=iseg,
-                experimental=experimental
+                experimental=experimental,
+                pred_size=pred_size
             )
             for x, y in gen:
                 yield x, y
@@ -179,7 +219,7 @@ def load_patch_batch_train(
             split,
             iseg,
             experimental,
-            datatype
+            datatype,
         )
         yield x, y
 
@@ -221,6 +261,7 @@ def load_patch_batch_generator_train(
         label_names,
         center_list,
         batch_size,
+        pred_size,
         size,
         nlabels,
         dfactor,
@@ -228,7 +269,7 @@ def load_patch_batch_generator_train(
         split=False,
         iseg=False,
         experimental=False,
-        datatype=np.float32
+        datatype=np.float32,
 ):
     # The following line is important to understand the goal of the down scaling factor.
     # The idea of this parameter is to speed up training when using a large pool of samples, while trying
@@ -251,7 +292,8 @@ def load_patch_batch_generator_train(
             split,
             iseg,
             experimental,
-            datatype
+            datatype,
+            pred_size=pred_size
         )
         yield x, y
 

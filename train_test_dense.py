@@ -27,6 +27,7 @@ from keras.utils.data_utils import get_file
 from keras.engine.topology import get_source_inputs
 from keras.applications.imagenet_utils import _obtain_input_shape
 import keras.backend as K
+import loss_functions as lf
 
 from subpixel import SubPixelUpscaling
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -35,16 +36,17 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def parse_inputs():
     # I decided to separate this function, for easier acces to the command line parameters
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
-    parser.add_argument('-f', '--folder', dest='dir_name', default='/media/lele/DATA/spie/temp')
+    parser.add_argument('-f', '--folder', dest='dir_name', default='/media/yue/Data/spie/Brats17TrainingData/HGG')
     parser.add_argument('-F', '--n-fold', dest='folds', type=int, default=5)
-    parser.add_argument('-i', '--patch-width', dest='patch_width', type=int, default=13)
+    parser.add_argument('-i', '--patch-width', dest='patch_width', type=int, default=32)
     parser.add_argument('-k', '--kernel-size', dest='conv_width', nargs='+', type=int, default=3)
     parser.add_argument('-c', '--conv-blocks', dest='conv_blocks', type=int, default=5)
-    parser.add_argument('-b', '--batch-size', dest='batch_size', type=int, default=2048)
+    parser.add_argument('-b', '--batch-size', dest='batch_size', type=int, default=16)
+    parser.add_argument('-p', '--pred-size', dest='pred_size', type=int, default=8)
     parser.add_argument('-d', '--dense-size', dest='dense_size', type=int, default=256)
     parser.add_argument('-D', '--down-factor', dest='dfactor', type=int, default=500)
     parser.add_argument('-n', '--num-filters', action='store', dest='n_filters', nargs='+', type=int, default=[32])
-    parser.add_argument('-e', '--epochs', action='store', dest='epochs', type=int, default=6)
+    parser.add_argument('-e', '--epochs', action='store', dest='epochs', type=int, default=1)
     parser.add_argument('-q', '--queue', action='store', dest='queue', type=int, default=10)
     parser.add_argument('-u', '--unbalanced', action='store_false', dest='balanced', default=True)
     parser.add_argument('-s', '--sequential', action='store_true', dest='sequential', default=False)
@@ -71,6 +73,8 @@ def get_names_from_path(options):
     path = options['dir_name']
 
     patients = sorted(list_directories(path))
+
+    # patients = patients[:6] # multiply of 6
 
     # Prepare the names
     flair_names = [os.path.join(path, p, p.split('/')[-1] + options['flair'])
@@ -199,7 +203,7 @@ def __transition_up_block(ip, nb_filters, type='upsampling', weight_decay=1E-4):
     if type == 'upsampling':
         x = UpSampling3D()(ip)
     elif type == 'subpixel':
-        x = Conv3D(nb_filters, (3, 3,  3), activation='relu', padding='same',data_format='channels_first', W_regularizer=l2(weight_decay),
+        x = Conv3D(nb_filters, (3, 3, 3), activation='relu', padding='same',data_format='channels_first', W_regularizer=l2(weight_decay),
                    use_bias=False, kernel_initializer='he_uniform')(ip)
         x = SubPixelUpscaling(scale_factor=2)(x)
         x = Conv3D(nb_filters, (3, 3, 3), activation='relu', padding='same',data_format='channels_first', W_regularizer=l2(weight_decay),
@@ -209,6 +213,28 @@ def __transition_up_block(ip, nb_filters, type='upsampling', weight_decay=1E-4):
                             kernel_initializer='he_uniform')(ip)
 
     return x
+
+
+def DenseNetTransit(x, rate=1, name=None):
+    if rate != 1:
+        out_features = x.get_shape().as_list()[-1] * rate
+        x = BatchNormalization(center=True, scale=True, name=name + '_bn')(x)
+        x = Activation('relu', name=name + '_relu')(x)
+        x = Conv3D(filters=out_features, kernel_size=1, strides=1, padding='same', kernel_initializer='he_normal',
+                   use_bias=False, name=name + '_conv')(x)
+    x = AveragePooling3D(pool_size=2, strides=2, padding='same')(x)
+    return x
+
+
+def DenseNetUnit3D(x, growth_rate, ksize, n, bn_decay=0.99):
+    for i in range(n):
+        concat = x
+        x = BatchNormalization(center=True, scale=True, momentum=bn_decay)(x)
+        x = Activation('relu')(x)
+        x = Conv3D(filters=growth_rate, kernel_size=ksize, padding='same', kernel_initializer='he_uniform', use_bias=False)(x)
+        x = concatenate([concat, x])
+    return x
+
 
 def create_densenet(nb_classes, img_input, include_top= False, depth=28, nb_dense_block=3, growth_rate=4, nb_filter=8,
                        nb_layers_per_block=2, bottleneck=False, reduction=0.0, dropout_rate=None, weight_decay=1E-4,
@@ -260,11 +286,19 @@ def create_densenet(nb_classes, img_input, include_top= False, depth=28, nb_dens
                            beta_regularizer=l2(weight_decay))(x)
 
     x = Activation('relu')(x)
-    # x = GlobalAveragePooling3D()(x)
 
-    # if include_top:
-    #     x = Dense(nb_classes, activation=activation, kernel_regularizer=l2(weight_decay), bias_regularizer=l2(weight_decay))(x)
+    return x
 
+
+def dense_net(input):
+    x = Conv3D(filters=24, kernel_size=3, strides=1, kernel_initializer='he_uniform', padding='same', use_bias=False)(input)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
+    x = DenseNetTransit(x)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
+    x = DenseNetTransit(x)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
     return x
 
 
@@ -282,6 +316,7 @@ def main():
     patch_width = options['patch_width']
     patch_size = (patch_width, patch_width, patch_width)
     batch_size = options['batch_size']
+    pred_size = options['pred_size']
     dense_size = options['dense_size']
     conv_blocks = options['conv_blocks']
     n_filters = options['n_filters']
@@ -313,7 +348,7 @@ def main():
     data_names, label_names = get_names_from_path(options)
     folds = options['folds']
     # (train_data, train_labels, val_data, val_labels, test_data, test_labels) = fold_train_test_val(data_names, label_names,val_data=0.25)
-    datas  = fold_train_test_val(data_names, label_names,val_data=0.25)
+    datas = fold_train_test_val(data_names, label_names,val_data=0.25)
     train_data, train_labels, val_data, val_labels, test_data, test_labels= datas[0], datas[1], datas[2], datas[3], datas[4], datas[5]
     dsc_results = list()
     dsc_results = list()
@@ -322,7 +357,7 @@ def main():
           % (len(train_data), len(train_labels), len(val_data), len(val_labels), len(test_data)) + c['nc'])
     # Prepare the data relevant to the leave-one-out (subtract the patient from the dataset and set the path)
     # Also, prepare the network
-    net_name = os.path.join(path, 'dense.mdl')
+    net_name = os.path.join(path, 'dense.hdf5')
 
     # First we check that we did not train for that patient, in order to save time
     try:
@@ -346,84 +381,28 @@ def main():
         # - Core segmentation (including whole tumor)
         # - Whole segmentation (tumor, core and enhancing parts)
         # The idea is to let the network work on the three parts to improve the multiclass segmentation.
-        merged_inputs = Input(shape=(4,) + patch_size, name='merged_inputs')
-        flair = Reshape((1,) + patch_size)(
+        merged_inputs = Input(shape=patch_size + (4,), name='merged_inputs')
+        flair = Reshape(patch_size + (1,))(
           Lambda(
-              lambda l: l[:, 0, :, :, :],
-              output_shape=(1,) + patch_size)(merged_inputs),
+              lambda l: l[:, :, :, :, 0],
+              output_shape=patch_size + (1,))(merged_inputs),
         )
-        t2 = Reshape((1,) + patch_size)(
-          Lambda(lambda l: l[:, 1, :, :, :], output_shape=(1,) + patch_size)(merged_inputs)
+        t2 = Reshape(patch_size + (1,))(
+          Lambda(lambda l: l[:, :, :, :, 1], output_shape=patch_size + (1,))(merged_inputs)
         )
-        t1 = Lambda(lambda l: l[:, 2:, :, :, :], output_shape=(2,) + patch_size)(merged_inputs)
-        flair = create_densenet(2,flair)
-        t2 = create_densenet(3, t2)
-        t1 = create_densenet(5,t1)
-                  
-        # flair = Conv3D(8,(3,3,3),activation= 'relu',data_format = 'channels_first')(flair)
-        # # flair = Dropout(0.5)(flair)
-        # flair = Conv3D(16,(3,3,3),activation= 'relu',data_format = 'channels_first')(flair)
-        # # flair = Dropout(0.5)(flair)
-        # flair = Conv3D(16,(3,3,3),activation= 'relu',data_format = 'channels_first')(flair)
-        # # flair = Dropout(0.5)(flair)
-        # flair = Conv3D(32,(3,3,3),activation= 'relu',data_format = 'channels_first')(flair)
-        # # flair = Dropout(0.5)(flair)
-        # flair = Conv3D(32,(3,3,3),activation= 'relu',data_format = 'channels_first')(flair)
-        # flair = Dropout(0.5)(flair)
-        # t2 = Conv3D(8,(3,3,3),activation= 'relu',data_format = 'channels_first')(t2)
-        # # t2 = Dropout(0.5)(t2)
-        # t2 = Conv3D(16,(3,3,3),activation= 'relu',data_format = 'channels_first')(t2)
-        # # t2 = Dropout(0.5)(t2)
-        # t2 = Conv3D(16,(3,3,3),activation= 'relu',data_format = 'channels_first')(t2)
-        # # t2 = Dropout(0.5)(t2)
-        # t2 = Conv3D(32,(3,3,3),activation= 'relu',data_format = 'channels_first')(t2)
-        # # t2 = Dropout(0.5)(t2)
-        # t2 = Conv3D(32,(3,3,3),activation= 'relu',data_format = 'channels_first')(t2)
-        # # t2 = Dropout(0.5)(t2)
-        # t1 = Conv3D(8,(3,3,3),activation= 'relu',data_format = 'channels_first')(t1)
-        # # t1 = Dropout(0.5)(t1)
-        # t1 = Conv3D(16,(3,3,3),activation= 'relu',data_format = 'channels_first')(t1)
-        # # t1 = Dropout(0.5)(t1)
-        # t1 = Conv3D(16,(3,3,3),activation= 'relu',data_format = 'channels_first')(t1)
-        # # t1 = Dropout(0.5)(t1)
-        # t1 = Conv3D(32,(3,3,3),activation= 'relu',data_format = 'channels_first')(t1) 
-        # # t1 = Dropout(0.5)(t1)
-        # t1 = Conv3D(32,(3,3,3),activation= 'relu',data_format = 'channels_first')(t1)
-        # t1 = Dropout(0.5)(t1)
-        # for filters, kernel_size in zip(filters_list, kernel_size_list):
-        #   flair = Conv3D(filters,
-        #                  kernel_size=kernel_size,
-        #                  activation='relu',
-        #                  data_format='channels_first'
-        #                  )(flair)
-        #   t2 = Conv3D(filters,
-        #               kernel_size=kernel_size,
-        #               activation='relu',
-        #               data_format='channels_first'
-        #               )(t2)
-        #   t1 = Conv3D(filters,
-        #               kernel_size=kernel_size,
-        #               activation='relu',
-        #               data_format='channels_first'
-        #               )(t1)
-        #   flair = Dropout(0.5)(flair)
-        #   t2 = Dropout(0.5)(t2)
-        #   t1 = Dropout(0.5)(t1)
-        flair = Flatten()(flair)
-        t2 = Flatten()(t2)
-        t1 = Flatten()(t1)
-        flair = Dense(dense_size, activation='relu')(flair)
-        flair = Dropout(0.5)(flair)
-        t2 = concatenate([flair, t2])
-        t2 = Dense(dense_size, activation='relu')(t2)
-        t2 = Dropout(0.5)(t2)
-        t1 = concatenate([t2, t1])
-        t1 = Dense(dense_size, activation='relu')(t1)
-        t1 = Dropout(0.5)(t1)
+        t1 = Lambda(lambda l: l[:, :, :, :, 2:], output_shape=patch_size + (2,))(merged_inputs)
 
-        tumor = Dense(2, activation='softmax', name='tumor')(flair)
-        core = Dense(3, activation='softmax', name='core')(t2)
-        enhancing = Dense(num_classes, activation='softmax', name='enhancing')(t1)
+        flair = dense_net(flair)
+        t2 = dense_net(t2)
+        t1 = dense_net(t1)
+
+        t2 = concatenate([flair, t2])
+
+        t1 = concatenate([t2, t1])
+
+        tumor = Conv3D(2, kernel_size=1, strides=1, name='tumor')(flair)
+        core = Conv3D(3, kernel_size=1, strides=1, name='core')(t2)
+        enhancing = Conv3D(num_classes, kernel_size=1, strides=1, name='enhancing')(t1)
         net = Model(inputs=merged_inputs, outputs=[tumor, core, enhancing])
         # net = Model(inputs=merged_inputs, outputs=[tumor])
         
@@ -432,7 +411,7 @@ def main():
 
         # net_name_before =  os.path.join(path,'baseline-brats2017.fold0.D500.f.p13.c3c3c3c3c3.n32n32n32n32n32.d256.e1.pad_valid.mdl')
         # net = keras.models.load_model(net_name_before)
-        net.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+        net.compile(optimizer='adadelta', loss=lf.segmentation_loss, metrics=['accuracy'])
 
         print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' +
               c['g'] + 'Training the model with a generator for ' +
@@ -445,6 +424,7 @@ def main():
                 label_names=train_labels,
                 centers=train_centers,
                 batch_size=batch_size,
+                pred_size=pred_size,
                 size=patch_size,
                 # fc_shape = patch_size,
                 nlabels=num_classes,
@@ -458,6 +438,7 @@ def main():
                 label_names=val_labels,
                 centers=val_centers,
                 batch_size=batch_size,
+                pred_size=pred_size,
                 size=patch_size,
                 # fc_shape = patch_size,
                 nlabels=num_classes,
@@ -474,60 +455,60 @@ def main():
         net.save(net_name)
 
     # Then we test the net.
-    for p, gt_name in zip(test_data, test_labels):
-        p_name = p[0].rsplit('/')[-2]
-        patient_path = '/'.join(p[0].rsplit('/')[:-1])
-        outputname = os.path.join(patient_path, 'dense_test.nii.gz')
-        gt_nii = load_nii(gt_name)
-        gt = np.copy(gt_nii.get_data()).astype(dtype=np.uint8)
-        try:
-            load_nii(outputname)
-        except IOError:
-            roi_nii = load_nii(p[0])
-            roi = roi_nii.get_data().astype(dtype=np.bool)
-            centers = get_mask_voxels(roi)
-            test_samples = np.count_nonzero(roi)
-            image = np.zeros_like(roi).astype(dtype=np.uint8)
-            print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' + c['g'] +
-                  '<Creating the probability map ' + c['b'] + p_name + c['nc'] + c['g'] +
-                  ' (%d samples)>' % test_samples + c['nc'])
-            test_steps_per_epoch = -(-test_samples / batch_size)
-            y_pr_pred = net.predict_generator(
-                generator=load_patch_batch_generator_test(
-                    image_names=p,
-                    centers=centers,
-                    batch_size=batch_size,
-                    size=patch_size,
-                    preload=preload,
-                ),
-                steps=test_steps_per_epoch,
-                max_q_size=queue
-            )
-            [x, y, z] = np.stack(centers, axis=1)
-
-            if not sequential:
-                tumor = np.argmax(y_pr_pred[0], axis=1)
-                y_pr_pred = y_pr_pred[-1]
-                roi = np.zeros_like(roi).astype(dtype=np.uint8)
-                roi[x, y, z] = tumor
-                roi_nii.get_data()[:] = roi
-                roiname = os.path.join(patient_path, 'dense'  + '_test.roi.nii.gz')
-                roi_nii.to_filename(roiname)
-
-            y_pred = np.argmax(y_pr_pred, axis=1)
-
-            image[x, y, z] = y_pred
-            # Post-processing (Basically keep the biggest connected region)
-            image = get_biggest_region(image)
-            labels = np.unique(gt.flatten())
-            results = (p_name,) + tuple([dsc_seg(gt == l, image == l) for l in labels[1:]])
-            text = 'Subject %s DSC: ' + '/'.join(['%f' for _ in labels[1:]])
-            print(text % results)
-            dsc_results.append(results)
-
-            print(c['g'] + '                   -- Saving image ' + c['b'] + outputname + c['nc'])
-            roi_nii.get_data()[:] = image
-            roi_nii.to_filename(outputname)
+    # for p, gt_name in zip(test_data, test_labels):
+    #     p_name = p[0].rsplit('/')[-2]
+    #     patient_path = '/'.join(p[0].rsplit('/')[:-1])
+    #     outputname = os.path.join(patient_path, 'dense_test.nii.gz')
+    #     gt_nii = load_nii(gt_name)
+    #     gt = np.copy(gt_nii.get_data()).astype(dtype=np.uint8)
+    #     try:
+    #         load_nii(outputname)
+    #     except IOError:
+    #         roi_nii = load_nii(p[0])
+    #         roi = roi_nii.get_data().astype(dtype=np.bool)
+    #         centers = get_mask_voxels(roi)
+    #         test_samples = np.count_nonzero(roi)
+    #         image = np.zeros_like(roi).astype(dtype=np.uint8)
+    #         print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' + c['g'] +
+    #               '<Creating the probability map ' + c['b'] + p_name + c['nc'] + c['g'] +
+    #               ' (%d samples)>' % test_samples + c['nc'])
+    #         test_steps_per_epoch = -(-test_samples / batch_size)
+    #         y_pr_pred = net.predict_generator(
+    #             generator=load_patch_batch_generator_test(
+    #                 image_names=p,
+    #                 centers=centers,
+    #                 batch_size=batch_size,
+    #                 size=patch_size,
+    #                 preload=preload,
+    #             ),
+    #             steps=test_steps_per_epoch,
+    #             max_q_size=queue
+    #         )
+    #         [x, y, z] = np.stack(centers, axis=1)
+    #
+    #         if not sequential:
+    #             tumor = np.argmax(y_pr_pred[0], axis=1)
+    #             y_pr_pred = y_pr_pred[-1]
+    #             roi = np.zeros_like(roi).astype(dtype=np.uint8)
+    #             roi[x, y, z] = tumor
+    #             roi_nii.get_data()[:] = roi
+    #             roiname = os.path.join(patient_path, 'dense'  + '_test.roi.nii.gz')
+    #             roi_nii.to_filename(roiname)
+    #
+    #         y_pred = np.argmax(y_pr_pred, axis=1)
+    #
+    #         image[x, y, z] = y_pred
+    #         # Post-processing (Basically keep the biggest connected region)
+    #         image = get_biggest_region(image)
+    #         labels = np.unique(gt.flatten())
+    #         results = (p_name,) + tuple([dsc_seg(gt == l, image == l) for l in labels[1:]])
+    #         text = 'Subject %s DSC: ' + '/'.join(['%f' for _ in labels[1:]])
+    #         print(text % results)
+    #         dsc_results.append(results)
+    #
+    #         print(c['g'] + '                   -- Saving image ' + c['b'] + outputname + c['nc'])
+    #         roi_nii.get_data()[:] = image
+    #         roi_nii.to_filename(outputname)
 
 
 if __name__ == '__main__':
