@@ -451,7 +451,7 @@ def main():
             validation_steps=val_steps_per_epoch,
             workers = 40,
             max_q_size=queue,
-            , use_multiprocessing=True,
+            use_multiprocessing=True,
             epochs=epochs
         )
         net.save(net_name)
