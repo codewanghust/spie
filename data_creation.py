@@ -121,7 +121,9 @@ def get_xy(
     y = to_nparray(y)
     y[idx] = y
     if split:
+        print '==================================='
         if iseg:
+            print '++++++++++++++'
             vals = [0, 10, 150, 250]
             labels = len(vals)
             y_labels = [keras.utils.to_categorical(y == l, num_classes=2) for l in vals[1:]]
