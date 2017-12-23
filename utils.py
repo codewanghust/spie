@@ -67,15 +67,13 @@ def nfold_cross_validation(data_list, labels_list, n=1, random_state=42, val_dat
             yield tr_data, tr_labels, tst_data, tst_labels
 
 def fold_train_test_val(data_list, labels_list, random_state=42, val_data=None):
-    np.random.seed(random_state)
-    shuffled_indices = np.random.permutation(xrange(len(data_list)))
-    labels = labels_list[[idx for idx in shuffled_indices ]]
-    datas = data_list[[idx for idx in shuffled_indices ]]
-
-
-    val_len = int(len(data_list) * val_data) if val_data is not None else None
-
-    return [datas[val_len:], labels[val_len:], datas[:val_len], labels[:val_len], datas[:val_len], labels[:val_len]]
+    # np.random.seed(random_state)
+    # shuffled_indices = np.random.permutation(xrange(len(data_list)))
+    # labels = labels_list[[idx for idx in shuffled_indices ]]
+    # datas = data_list[[idx for idx in shuffled_indices ]]
+    #
+    #
+    return [data_list[:val_data], labels_list[:val_data], data_list[val_data:], labels_list[val_data:], data_list[val_data:], labels_list[val_data:]]
     
 
 
