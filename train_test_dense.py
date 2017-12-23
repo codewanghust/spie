@@ -54,8 +54,8 @@ def dense_model(patch_size, num_classes):
     t1 = concatenate([t2, t1])
 
     tumor = Conv3D(2, kernel_size=1, strides=1, name='tumor')(flair)
-    core = Conv3D(2, kernel_size=1, strides=1, name='core')(t2)
-    enhancing = Conv3D(2, kernel_size=1, strides=1, name='enhancing')(t1)
+    core = Conv3D(3, kernel_size=1, strides=1, name='core')(t2)
+    enhancing = Conv3D(4, kernel_size=1, strides=1, name='enhancing')(t1)
     net = Model(inputs=merged_inputs, outputs=[tumor, core, enhancing])
     return net
 
