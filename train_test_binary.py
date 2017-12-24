@@ -478,7 +478,7 @@ def main():
         ),
         steps_per_epoch=train_steps_per_epoch,
         validation_steps=val_steps_per_epoch,
-        workers=queue,
+        workers=30,
         max_q_size=queue,
         epochs=epochs
     )
