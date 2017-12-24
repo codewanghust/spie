@@ -446,7 +446,7 @@ def main():
 
 
     net.fit_generator(
-        generator=load_patch_batch_train(
+            generator=load_patch_batch_train(
             image_names=train_data,
             label_names=train_labels,
             centers=train_centers,
@@ -478,7 +478,7 @@ def main():
         ),
         steps_per_epoch=train_steps_per_epoch,
         validation_steps=val_steps_per_epoch,
-        workers=40,
+        workers=queue,
         max_q_size=queue,
         epochs=epochs
     )
