@@ -30,7 +30,7 @@ import keras.backend as K
 import loss_functions as lf
 
 from subpixel import SubPixelUpscaling
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
 
 def dense_model(patch_size, num_classes):
@@ -76,7 +76,7 @@ def parse_inputs():
     parser.add_argument('-e', '--epochs', action='store', dest='epochs', type=int, default=1)
     parser.add_argument('-q', '--queue', action='store', dest='queue', type=int, default=10)
     parser.add_argument('-u', '--unbalanced', action='store_false', dest='balanced', default=True)
-    parser.add_argument('-bb', '--binary', action='store', dest='binary', default=False)
+    parser.add_argument('-bb', '--binary', action='store', dest='binary', default=True)
     parser.add_argument('-C', '--continue-training', dest='continue', default=False)
     parser.add_argument('--preload', action='store_true', dest='preload', default=False)
     parser.add_argument('--padding', action='store', dest='padding', default='valid')
@@ -399,7 +399,7 @@ def main():
           % (len(train_data), len(train_labels), len(val_data), len(val_labels), len(test_data)) + c['nc'])
     # Prepare the data relevant to the leave-one-out (subtract the patient from the dataset and set the path)
     # Also, prepare the network
-    net_name = os.path.join(path, 'dense.hdf5')
+    net_name = os.path.join(path, 'dense_binary.hdf5')
 
     # First we check that we did not train for that patient, in order to save time
     # if save_path is None:

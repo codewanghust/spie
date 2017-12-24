@@ -30,7 +30,7 @@ import keras.backend as K
 import loss_functions as lf
 
 from subpixel import SubPixelUpscaling
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 
 def dense_model(patch_size, num_classes):

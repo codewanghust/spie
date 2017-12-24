@@ -123,7 +123,7 @@ def get_xy(
     y = to_nparray(y)
     y[idx] = y
     if split:
-        print ('==============+++++++===================')
+        # print ('==============+++++++===================')
         if binary:
             y = [
 
@@ -139,7 +139,7 @@ def get_xy(
                 center_crop_3d_cube_ignore_first_liast_dim(
                     keras.utils.to_categorical(np.array(y =1 ).astype(dtype=np.int8) ,
                                                num_classes=2).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
-                    pred_size),
+                    pred_size)
                 # center_crop_3d_cube_ignore_first_liast_dim(
                 #     keras.utils.to_categorical(y,
                 #                                num_classes=nlabels).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], nlabels]),
@@ -148,7 +148,7 @@ def get_xy(
             ]
         else:
             if iseg:
-                print ('++++++++++++++')
+                # print ('++++++++++++++')
                 vals = [0, 10, 150, 250]
                 labels = len(vals)
                 y_labels = [keras.utils.to_categorical(y == l, num_classes=2) for l in vals[1:]]
@@ -217,7 +217,6 @@ def threadsafe_generator(f):
     return g
 
 @threadsafe_generator
-
 def load_patch_batch_train(
         image_names,
         label_names,
@@ -311,7 +310,7 @@ def load_patches_train(
     )
     return x, y
 
-
+@threadsafe_generator
 def load_patch_batch_generator_train(
         image_list,
         label_names,
