@@ -133,11 +133,11 @@ def get_xy(
                     pred_size),
 
                 center_crop_3d_cube_ignore_first_liast_dim(
-                    keras.utils.to_categorical(np.array(y =1 ).astype(dtype=np.int8) + np.array(y =4).astype(dtype=np.int8),
+                    keras.utils.to_categorical(np.array(y ==1 ).astype(dtype=np.int8) + np.array(y ==4).astype(dtype=np.int8),
                                                num_classes=2).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
                     pred_size),
                 center_crop_3d_cube_ignore_first_liast_dim(
-                    keras.utils.to_categorical(np.array(y =1 ).astype(dtype=np.int8) ,
+                    keras.utils.to_categorical(np.array(y ==1 ).astype(dtype=np.int8) ,
                                                num_classes=2).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
                     pred_size)
                 # center_crop_3d_cube_ignore_first_liast_dim(
