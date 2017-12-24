@@ -105,6 +105,7 @@ def get_xy(
         nlabels,
         preload,
         split,
+        binary,
         iseg,
         experimental,
         datatype,
@@ -122,30 +123,7 @@ def get_xy(
     y[idx] = y
     if split:
         print ('==============+++++++===================')
-        if iseg:
-            print ('++++++++++++++')
-            vals = [0, 10, 150, 250]
-            labels = len(vals)
-            y_labels = [keras.utils.to_categorical(y == l, num_classes=2) for l in vals[1:]]
-            y_cat = np.sum(
-                map(lambda (lab, val): np.array(y == val, dtype=np.uint8) * lab, enumerate(vals)), axis=0
-            )
-            y_cat = [keras.utils.to_categorical(y_cat, num_classes=labels)]
-            if experimental == 3:
-                y_fc = [np.asarray(get_patches(l, lc, size, preload))
-                        for l, lc in izip(labels_generator(label_names), centers)]
-                y_fc = np.concatenate(y_fc)
-                y_fc[idx] = y_fc
-                y_fc_cat = np.sum(
-                    map(lambda (lab, val): (y_fc == val).astype(dtype=np.uint8) * lab, enumerate(vals)), axis=0
-                )
-                y_fc_cat = [keras.utils.to_categorical(y_fc_cat, num_classes=labels).reshape((len(y_fc), -1, 4))]
-                y_cat = y_cat + y_fc_cat
-            elif experimental > 1:
-                y_cat *= 3
-            y = y_labels + y_cat
-        else:
-
+        if binary:
             y = [
 
                 center_crop_3d_cube_ignore_first_liast_dim(
@@ -154,16 +132,62 @@ def get_xy(
                     pred_size),
 
                 center_crop_3d_cube_ignore_first_liast_dim(
-                    keras.utils.to_categorical(np.array(y > 0).astype(dtype=np.int8) + np.array(y > 1).astype(dtype=np.int8),
-                                               num_classes=3).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
+                    keras.utils.to_categorical(np.array(y =1 ).astype(dtype=np.int8) + np.array(y =4).astype(dtype=np.int8),
+                                               num_classes=2).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
                     pred_size),
-
                 center_crop_3d_cube_ignore_first_liast_dim(
-                    keras.utils.to_categorical(y,
-                                               num_classes=nlabels).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], nlabels]),
-                    pred_size)
+                    keras.utils.to_categorical(np.array(y =1 ).astype(dtype=np.int8) ,
+                                               num_classes=2).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
+                    pred_size),
+                # center_crop_3d_cube_ignore_first_liast_dim(
+                #     keras.utils.to_categorical(y,
+                #                                num_classes=nlabels).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], nlabels]),
+                #     pred_size)
 
             ]
+        else:
+            if iseg:
+                print ('++++++++++++++')
+                vals = [0, 10, 150, 250]
+                labels = len(vals)
+                y_labels = [keras.utils.to_categorical(y == l, num_classes=2) for l in vals[1:]]
+                y_cat = np.sum(
+                    map(lambda (lab, val): np.array(y == val, dtype=np.uint8) * lab, enumerate(vals)), axis=0
+                )
+                y_cat = [keras.utils.to_categorical(y_cat, num_classes=labels)]
+                if experimental == 3:
+                    y_fc = [np.asarray(get_patches(l, lc, size, preload))
+                            for l, lc in izip(labels_generator(label_names), centers)]
+                    y_fc = np.concatenate(y_fc)
+                    y_fc[idx] = y_fc
+                    y_fc_cat = np.sum(
+                        map(lambda (lab, val): (y_fc == val).astype(dtype=np.uint8) * lab, enumerate(vals)), axis=0
+                    )
+                    y_fc_cat = [keras.utils.to_categorical(y_fc_cat, num_classes=labels).reshape((len(y_fc), -1, 4))]
+                    y_cat = y_cat + y_fc_cat
+                elif experimental > 1:
+                    y_cat *= 3
+                y = y_labels + y_cat
+            else:
+
+                y = [
+
+                    center_crop_3d_cube_ignore_first_liast_dim(
+                        keras.utils.to_categorical(np.copy(y).astype(dtype=np.bool),
+                                                   num_classes=2).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 2]),
+                        pred_size),
+
+                    center_crop_3d_cube_ignore_first_liast_dim(
+                        keras.utils.to_categorical(np.array(y > 0).astype(dtype=np.int8) + np.array(y > 1).astype(dtype=np.int8),
+                                                   num_classes=3).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], 3]),
+                        pred_size),
+
+                    center_crop_3d_cube_ignore_first_liast_dim(
+                        keras.utils.to_categorical(y,
+                                                   num_classes=nlabels).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], nlabels]),
+                        pred_size)
+
+                ]
     else:
         y = keras.utils.to_categorical(np.copy(y).astype(dtype=np.bool), num_classes=2)
     x = np.transpose(x, axes=[0, 2, 3, 4, 1])
@@ -183,6 +207,7 @@ def load_patch_batch_train(
         datatype=np.float32,
         preload=False,
         split=False,
+        binary = False,
         iseg=False,
         experimental=False,
         generator=True,
@@ -202,6 +227,7 @@ def load_patch_batch_train(
                 dfactor=dfactor,
                 preload=preload,
                 split=split,
+                binary=binary,
                 iseg=iseg,
                 experimental=experimental,
                 pred_size=pred_size
@@ -220,6 +246,7 @@ def load_patch_batch_train(
             nlabels,
             preload,
             split,
+            binary,
             iseg,
             experimental,
             datatype,
@@ -238,6 +265,7 @@ def load_patches_train(
         datatype=np.float32,
         preload=False,
         split=False,
+        binary=False,
         iseg=False,
         experimental=False,
 ):
@@ -252,6 +280,7 @@ def load_patches_train(
         nlabels,
         preload,
         split,
+        binary,
         iseg,
         experimental,
         datatype
@@ -270,6 +299,7 @@ def load_patch_batch_generator_train(
         dfactor,
         preload=False,
         split=False,
+        binary=False,
         iseg=False,
         experimental=False,
         datatype=np.float32,
@@ -293,6 +323,7 @@ def load_patch_batch_generator_train(
             nlabels,
             preload,
             split,
+            binary,
             iseg,
             experimental,
             datatype,
