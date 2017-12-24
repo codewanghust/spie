@@ -49,7 +49,7 @@ def parse_inputs():
     parser.add_argument('-e', '--epochs', action='store', dest='epochs', type=int, default=1)
     parser.add_argument('-q', '--queue', action='store', dest='queue', type=int, default=40)
     parser.add_argument('-u', '--unbalanced', action='store_false', dest='balanced', default=True)
-    parser.add_argument('-s', '--sequential', action='store_true', dest='sequential', default=False)
+    parser.add_argument('-s', '--binary', action='store_true', dest='binary', default=False)
     parser.add_argument('--preload', action='store_true', dest='preload', default=False)
     parser.add_argument('--padding', action='store', dest='padding', default='valid')
     parser.add_argument('--no-flair', action='store_false', dest='use_flair', default=True)
@@ -307,11 +307,10 @@ def main():
     c = color_codes()
 
     # Prepare the net architecture parameters
-    sequential = options['sequential']
     dfactor = options['dfactor']
     # Prepare the net hyperparameters
     num_classes = 5
-    epochs = options['epochs']
+    epochs = options[]['epochs']
     padding = options['padding']
     patch_width = options['patch_width']
     patch_size = (patch_width, patch_width, patch_width)
@@ -332,7 +331,6 @@ def main():
     path = options['dir_name']
     filters_s = 'n'.join(['%d' % nf for nf in filters_list])
     conv_s = 'c'.join(['%d' % cs for cs in kernel_size_list])
-    s_s = '.s' if sequential else '.f'
     ub_s = '.ub' if not balanced else ''
     params_s = (ub_s, dfactor, s_s, patch_width, conv_s, filters_s, dense_size, epochs, padding)
     sufix = '%s.D%d%s.p%d.c%s.n%s.d%d.e%d.pad_%s.' % params_s
@@ -375,86 +373,166 @@ def main():
         train_steps_per_epoch = -(-train_samples/batch_size)
         val_steps_per_epoch = -(-val_samples / batch_size)
         input_shape = (n_channels,) + patch_size
-        
-        # This architecture is based on the functional Keras API to introduce 3 output paths:
-        # - Whole tumor segmentation
-        # - Core segmentation (including whole tumor)
-        # - Whole segmentation (tumor, core and enhancing parts)
-        # The idea is to let the network work on the three parts to improve the multiclass segmentation.
-        merged_inputs = Input(shape=patch_size + (4,), name='merged_inputs')
-        flair = Reshape(patch_size + (1,))(
-          Lambda(
-              lambda l: l[:, :, :, :, 0],
-              output_shape=patch_size + (1,))(merged_inputs),
-        )
-        t2 = Reshape(patch_size + (1,))(
-          Lambda(lambda l: l[:, :, :, :, 1], output_shape=patch_size + (1,))(merged_inputs)
-        )
-        t1 = Lambda(lambda l: l[:, :, :, :, 2:], output_shape=patch_size + (2,))(merged_inputs)
+        if options['binary']:
+            # This architecture is based on the functional Keras API to introduce 3 output paths:
+            # - Whole tumor segmentation
+            # - Core segmentation (including whole tumor)
+            # - Whole segmentation (tumor, core and enhancing parts)
+            # The idea is to let the network work on the three parts to improve the multiclass segmentation.
+            merged_inputs = Input(shape=patch_size + (4,), name='merged_inputs')
+            flair = Reshape(patch_size + (1,))(
+              Lambda(
+                  lambda l: l[:, :, :, :, 0],
+                  output_shape=patch_size + (1,))(merged_inputs),
+            )
+            t2 = Reshape(patch_size + (1,))(
+              Lambda(lambda l: l[:, :, :, :, 1], output_shape=patch_size + (1,))(merged_inputs)
+            )
+            t1 = Lambda(lambda l: l[:, :, :, :, 2:], output_shape=patch_size + (2,))(merged_inputs)
 
-        flair = dense_net(flair)
-        t2 = dense_net(t2)
-        t1 = dense_net(t1)
+            flair = dense_net(flair)
+            t2 = dense_net(t2)
+            t1 = dense_net(t1)
 
-        t2 = concatenate([flair, t2])
+            t2 = concatenate([flair, t2])
 
-        t1 = concatenate([t2, t1])
+            t1 = concatenate([t2, t1])
 
-        tumor = Conv3D(2, kernel_size=1, strides=1, name='tumor')(flair)
-        core = Conv3D(3, kernel_size=1, strides=1, name='core')(t2)
-        enhancing = Conv3D(num_classes, kernel_size=1, strides=1, name='enhancing')(t1)
-        net = Model(inputs=merged_inputs, outputs=[tumor, core, enhancing])
-        # net = Model(inputs=merged_inputs, outputs=[tumor])
-        
+            tumor = Conv3D(2, kernel_size=1, strides=1, name='tumor')(flair)
+            core = Conv3D(2, kernel_size=1, strides=1, name='core')(t2)
+            enhancing = Conv3D(2, kernel_size=1, strides=1, name='enhancing')(t1)
+            net = Model(inputs=merged_inputs, outputs=[tumor, core, enhancing])
+            # net = Model(inputs=merged_inputs, outputs=[tumor])
+            
+            # net_name_before =  os.path.join(path,'baseline-brats2017.fold0.D500.f.p13.c3c3c3c3c3.n32n32n32n32n32.d256.e1.pad_valid.mdl')
+            # net = keras.models.load_model(net_name_before)
+            net.compile(optimizer='adadelta', loss=lf.segmentation_loss, metrics=['accuracy'])
+
+            print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' +
+                  c['g'] + 'Training the model with a generator for ' +
+                  c['b'] + '(%d parameters)' % net.count_params() + c['nc'])
+            print(net.summary())
+       
+            net.fit_generator(
+                generator=load_patch_batch_train(
+                    image_names=train_data,
+                    label_names=train_labels,
+                    centers=train_centers,
+                    batch_size=batch_size,
+                    pred_size=pred_size,
+                    size=patch_size,
+                    # fc_shape = patch_size,
+                    nlabels=num_classes,
+                    dfactor=dfactor,
+                    preload=preload,
+                    split=True,
+                    binary = options['binary'],
+                    datatype=np.float32
+                ),
+                validation_data=load_patch_batch_train(
+                    image_names=val_data,
+                    label_names=val_labels,
+                    centers=val_centers,
+                    batch_size=batch_size,
+                    pred_size=pred_size,
+                    size=patch_size,
+                    # fc_shape = patch_size,
+                    nlabels=num_classes,
+                    dfactor=dfactor,
+                    preload=preload,
+                    split=True,
+                    binary = options['binary'],
+                    datatype=np.float32
+                ),
+                steps_per_epoch=train_steps_per_epoch,
+                validation_steps=val_steps_per_epoch,
+                workers = queue,
+                max_q_size=queue,
+                use_multiprocessing=True,
+                epochs=epochs
+            )
+            net.save(net_name)
 
 
+        else:
+            # This architecture is based on the functional Keras API to introduce 3 output paths:
+            # - Whole tumor segmentation
+            # - Core segmentation (including whole tumor)
+            # - Whole segmentation (tumor, core and enhancing parts)
+            # The idea is to let the network work on the three parts to improve the multiclass segmentation.
+            merged_inputs = Input(shape=patch_size + (4,), name='merged_inputs')
+            flair = Reshape(patch_size + (1,))(
+              Lambda(
+                  lambda l: l[:, :, :, :, 0],
+                  output_shape=patch_size + (1,))(merged_inputs),
+            )
+            t2 = Reshape(patch_size + (1,))(
+              Lambda(lambda l: l[:, :, :, :, 1], output_shape=patch_size + (1,))(merged_inputs)
+            )
+            t1 = Lambda(lambda l: l[:, :, :, :, 2:], output_shape=patch_size + (2,))(merged_inputs)
 
-        # net_name_before =  os.path.join(path,'baseline-brats2017.fold0.D500.f.p13.c3c3c3c3c3.n32n32n32n32n32.d256.e1.pad_valid.mdl')
-        # net = keras.models.load_model(net_name_before)
-        net.compile(optimizer='adadelta', loss=lf.segmentation_loss, metrics=['accuracy'])
+            flair = dense_net(flair)
+            t2 = dense_net(t2)
+            t1 = dense_net(t1)
 
-        print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' +
-              c['g'] + 'Training the model with a generator for ' +
-              c['b'] + '(%d parameters)' % net.count_params() + c['nc'])
-        print(net.summary())
-   
-        net.fit_generator(
-            generator=load_patch_batch_train(
-                image_names=train_data,
-                label_names=train_labels,
-                centers=train_centers,
-                batch_size=batch_size,
-                pred_size=pred_size,
-                size=patch_size,
-                # fc_shape = patch_size,
-                nlabels=num_classes,
-                dfactor=dfactor,
-                preload=preload,
-                split=not sequential,
-                datatype=np.float32
-            ),
-            validation_data=load_patch_batch_train(
-                image_names=val_data,
-                label_names=val_labels,
-                centers=val_centers,
-                batch_size=batch_size,
-                pred_size=pred_size,
-                size=patch_size,
-                # fc_shape = patch_size,
-                nlabels=num_classes,
-                dfactor=dfactor,
-                preload=preload,
-                split=not sequential,
-                datatype=np.float32
-            ),
-            steps_per_epoch=train_steps_per_epoch,
-            validation_steps=val_steps_per_epoch,
-            workers = 40,
-            max_q_size=queue,
-            use_multiprocessing=True,
-            epochs=epochs
-        )
-        net.save(net_name)
+            t2 = concatenate([flair, t2])
+
+            t1 = concatenate([t2, t1])
+
+            tumor = Conv3D(2, kernel_size=1, strides=1, name='tumor')(flair)
+            core = Conv3D(3, kernel_size=1, strides=1, name='core')(t2)
+            enhancing = Conv3D(num_classes, kernel_size=1, strides=1, name='enhancing')(t1)
+            net = Model(inputs=merged_inputs, outputs=[tumor, core, enhancing])
+            # net = Model(inputs=merged_inputs, outputs=[tumor])
+            
+            # net_name_before =  os.path.join(path,'baseline-brats2017.fold0.D500.f.p13.c3c3c3c3c3.n32n32n32n32n32.d256.e1.pad_valid.mdl')
+            # net = keras.models.load_model(net_name_before)
+            net.compile(optimizer='adadelta', loss=lf.segmentation_loss, metrics=['accuracy'])
+
+            print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' +
+                  c['g'] + 'Training the model with a generator for ' +
+                  c['b'] + '(%d parameters)' % net.count_params() + c['nc'])
+            print(net.summary())
+       
+            net.fit_generator(
+                generator=load_patch_batch_train(
+                    image_names=train_data,
+                    label_names=train_labels,
+                    centers=train_centers,
+                    batch_size=batch_size,
+                    pred_size=pred_size,
+                    size=patch_size,
+                    # fc_shape = patch_size,
+                    nlabels=num_classes,
+                    dfactor=dfactor,
+                    preload=preload,
+                    split=True,
+                    binary = options['binary'],
+                    datatype=np.float32
+                ),
+                validation_data=load_patch_batch_train(
+                    image_names=val_data,
+                    label_names=val_labels,
+                    centers=val_centers,
+                    batch_size=batch_size,
+                    pred_size=pred_size,
+                    size=patch_size,
+                    # fc_shape = patch_size,
+                    nlabels=num_classes,
+                    dfactor=dfactor,
+                    preload=preload,
+                    split=True,
+                    binary = options['binary'],
+                    datatype=np.float32
+                ),
+                steps_per_epoch=train_steps_per_epoch,
+                validation_steps=val_steps_per_epoch,
+                workers = queue,
+                max_q_size=queue,
+                use_multiprocessing=True,
+                epochs=epochs
+            )
+            net.save(net_name)
 
     # Then we test the net.
     # for p, gt_name in zip(test_data, test_labels):
