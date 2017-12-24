@@ -49,7 +49,7 @@ def parse_inputs():
     parser.add_argument('-e', '--epochs', action='store', dest='epochs', type=int, default=1)
     parser.add_argument('-q', '--queue', action='store', dest='queue', type=int, default=40)
     parser.add_argument('-u', '--unbalanced', action='store_false', dest='balanced', default=True)
-    parser.add_argument('-s', '--binary', action='store_true', dest='binary', default=False)
+    parser.add_argument('-binary', '--binary', action='store_true', dest='binary', default=False)
     parser.add_argument('--preload', action='store_true', dest='preload', default=False)
     parser.add_argument('--padding', action='store', dest='padding', default='valid')
     parser.add_argument('--no-flair', action='store_false', dest='use_flair', default=True)
