@@ -387,10 +387,8 @@ def main():
     )
 
     print(c['c'] + '[' + strftime("%H:%M:%S") + '] ')
-    # N-fold cross validation main loop (we'll do 2 training iterations with testing for each patient)
     data_names, label_names, train_len = get_names_from_path(options)
     folds = options['folds']
-    # (train_data, train_labels, val_data, val_labels, test_data, test_labels) = fold_train_test_val(data_names, label_names,val_data=0.25)
     datas = fold_train_test_val(data_names, label_names,val_data=train_len)
     train_data, train_labels, val_data, val_labels, test_data, test_labels= datas[0], datas[1], datas[2], datas[3], datas[4], datas[5]
     dsc_results = list()
@@ -437,7 +435,7 @@ def main():
         net.load_weights(net_name)
         print 'weights loaded'
 
-    net.compile(optimizer='adadelta', loss=lf.segmentation_loss, metrics=['accuracy'])
+    net.compile(optimizer='sgd', loss=lf.segmentation_loss, metrics=['accuracy'])
 
     print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' +
           c['g'] + 'Training the model with a generator for ' +
@@ -454,27 +452,25 @@ def main():
             batch_size=batch_size,
             pred_size=pred_size,
             size=patch_size,
-            # fc_shape = patch_size,
             nlabels=num_classes,
             dfactor=dfactor,
             preload=preload,
             split=not sequential,
             datatype=np.float32
         ),
-        validation_data=load_patch_batch_train(
-            image_names=val_data,
-            label_names=val_labels,
-            centers=val_centers,
-            batch_size=batch_size,
-            pred_size=pred_size,
-            size=patch_size,
-            # fc_shape = patch_size,
-            nlabels=num_classes,
-            dfactor=dfactor,
-            preload=preload,
-            split=not sequential,
-            datatype=np.float32
-        ),
+        # validation_data=load_patch_batch_train(
+        #     image_names=val_data,
+        #     label_names=val_labels,
+        #     centers=val_centers,
+        #     batch_size=batch_size,
+        #     pred_size=pred_size,
+        #     size=patch_size,
+        #     nlabels=num_classes,
+        #     dfactor=dfactor,
+        #     preload=preload,
+        #     split=not sequential,
+        #     datatype=np.float32
+        # ),
         steps_per_epoch=train_steps_per_epoch,
         validation_steps=val_steps_per_epoch,
         workers=queue,
