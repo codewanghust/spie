@@ -72,11 +72,13 @@ def parse_inputs():
     parser.add_argument('-p', '--pred-size', dest='pred_size', type=int, default=8)
     parser.add_argument('-d', '--dense-size', dest='dense_size', type=int, default=256)
     parser.add_argument('-D', '--down-factor', dest='dfactor', type=int, default=500)
+    parser.add_argument('-s', '--sequntial', dest='sequntial', type=bool, default=False)
     parser.add_argument('-n', '--num-filters', action='store', dest='n_filters', nargs='+', type=int, default=[32])
     parser.add_argument('-e', '--epochs', action='store', dest='epochs', type=int, default=1)
     parser.add_argument('-q', '--queue', action='store', dest='queue', type=int, default=10)
     parser.add_argument('-u', '--unbalanced', action='store_false', dest='balanced', default=True)
     parser.add_argument('-bb', '--binary', action='store', dest='binary', default=True)
+    parser.add_argument('-dd', '--dense', action='store', dest='dense', default=True)
     parser.add_argument('-C', '--continue-training', dest='continue', default=False)
     parser.add_argument('--preload', action='store_true', dest='preload', default=False)
     parser.add_argument('--padding', action='store', dest='padding', default='valid')
@@ -342,6 +344,59 @@ def dense_net(input):
     x = Activation('relu')(x)
     return x
 
+def none_dense_net(input):
+    x = Conv3D(filters=24, kernel_size=3, strides=1, kernel_initializer='he_uniform', padding='same', use_bias=False)(input)
+
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
+    x = DenseNetTransit(x)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
+    x = DenseNetTransit(x)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    return x
+
+
+def none_dense_model(patch_size, num_classes):
+    merged_inputs = Input(shape=patch_size + (4,), name='merged_inputs')
+    flair = Reshape(patch_size + (1,))(
+        Lambda(
+            lambda l: l[:, :, :, :, 0],
+            output_shape=patch_size + (1,))(merged_inputs),
+    )
+    t2 = Reshape(patch_size + (1,))(
+        Lambda(lambda l: l[:, :, :, :, 1], output_shape=patch_size + (1,))(merged_inputs)
+    )
+    t1 = Lambda(lambda l: l[:, :, :, :, 2:], output_shape=patch_size + (2,))(merged_inputs)
+
+    flair = none_dense_net(flair)
+    t2 = none_dense_net(t2)
+    t1 = none_dense_net(t1)
+
+    t2 = concatenate([flair, t2])
+
+    t1 = concatenate([t2, t1])
+
+    tumor = Conv3D(2, kernel_size=1, strides=1, name='tumor')(flair)
+    core = Conv3D(2, kernel_size=1, strides=1, name='core')(t2)
+    enhancing = Conv3D(2, kernel_size=1, strides=1, name='enhancing')(t1)
+    net = Model(inputs=merged_inputs, outputs=[tumor, core, enhancing])
+    return net
+
+
+def none_dense_net(input):
+    model = Sequential()
+    x=Conv3D(64,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first')(input)
+
+    x = Conv3D(64,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first')(x)
+    x = MaxPooling3D(pool_size=(3, 3, 3), strides=2, data_format='channels_first')(x)
+
+    x = Conv3D(128,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first')(x)
+    x = Conv3D(128,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first')(x)
+    x = MaxPooling3D(pool_size=(3, 3, 3), strides=2, data_format='channels_first')(x)
+    return x
+
+
 
 def main():
     options = parse_inputs()
@@ -399,8 +454,13 @@ def main():
           % (len(train_data), len(train_labels), len(val_data), len(val_labels), len(test_data)) + c['nc'])
     # Prepare the data relevant to the leave-one-out (subtract the patient from the dataset and set the path)
     # Also, prepare the network
-    net_name = os.path.join(path, 'dense_binary.hdf5')
-
+    if options['binary'] :
+        if options['dense']:
+            net_name = os.path.join(path, 'dense_binary.hdf5')
+        else:
+            net_name = os.path.join(path, 'no_dense_binary.hdf5')
+    else:
+        net_name = os.path.join(path, 'no_dense_no_binary.hdf5')
     # First we check that we did not train for that patient, in order to save time
     # if save_path is None:
         # net_name_before =  os.path.join(path,'baseline-brats2017.fold0.D500.f.p13.c3c3c3c3c3.n32n32n32n32n32.d256.e1.pad_valid.mdl')
@@ -426,8 +486,10 @@ def main():
     # The idea is to let the network work on the three parts to improve the multiclass segmentation.
 
     # net = Model(inputs=merged_inputs, outputs=[tumor])
-
-    net = dense_model(patch_size=patch_size, num_classes=num_classes)
+    if options['dense']:
+        net = dense_model(patch_size=patch_size, num_classes=num_classes)
+    else:
+        net=none_dense_model(patch_size=patch_size, num_classes=num_classes)
 
 
     # net_name_before =  os.path.join(path,'baseline-brats2017.fold0.D500.f.p13.c3c3c3c3c3.n32n32n32n32n32.d256.e1.pad_valid.mdl')
@@ -436,7 +498,7 @@ def main():
         net.load_weights(net_name)
         print 'weights loaded'
 
-    net.compile(optimizer='adadelta', loss=lf.segmentation_loss, metrics=['accuracy'])
+    net.compile(optimizer='sgd', loss=lf.segmentation_loss, metrics=['accuracy'])
 
     print(c['c'] + '[' + strftime("%H:%M:%S") + ']    ' +
           c['g'] + 'Training the model with a generator for ' +
