@@ -31,6 +31,9 @@ import loss_functions as lf
 from nibabel import load as load_nii
 from sklearn.preprocessing import scale
 import matplotlib.pyplot as plt
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 # SAVE_PATH = 'unet3d_baseline.hdf5'
 # OFFSET_W = 16
 # OFFSET_H = 16
