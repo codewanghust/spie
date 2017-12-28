@@ -28,7 +28,7 @@ from keras.engine.topology import get_source_inputs
 from keras.applications.imagenet_utils import _obtain_input_shape
 import keras.backend as K
 import loss_functions as lf
-
+from nibabel import load as load_nii
 from sklearn.preprocessing import scale
 import matplotlib.pyplot as plt
 # SAVE_PATH = 'unet3d_baseline.hdf5'
@@ -44,7 +44,8 @@ import matplotlib.pyplot as plt
 def parse_inputs():
     # I decided to separate this function, for easier acces to the command line parameters
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
-    parser.add_argument('-s', '--save-path', dest='save_path', default='dense.hdf5')
+    parser.add_argument('-r', '--root-path', dest='root_path', default='/mnt/disk1/dat/lchen63/brain/data/data2')
+    parser.add_argument('-m', '--model-path', dest='model_path', default='/mnt/disk1/dat/lchen63/brain/model/dense.hdf5')
     parser.add_argument('-ow', '--offset-width', dest='offset_w', type=int, default=8)
     parser.add_argument('-oh', '--offset-height', dest='offset_h', type=int, default=8)
     parser.add_argument('-oc', '--offset-channel', dest='offset_c', nargs='+', type=int, default=8)
@@ -54,7 +55,7 @@ def parse_inputs():
     parser.add_argument('-ps', '--pred-size', dest='psize', type=int, default=8)
 
     return vars(parser.parse_args())
-
+options = parse_inputs()
 
 def vox_preprocess(vox):
     vox_shape = vox.shape
@@ -155,24 +156,47 @@ def norm(image):
 
 
 def vox_generator_test(all_files):
-    path_flair = '/home/yue/Desktop/data/brain_HGG/train/flair/'
-    path_t1 = '/home/yue/Desktop/data/brain_HGG/train/t1/'
-    path_t2 = '/home/yue/Desktop/data/brain_HGG/train/t2/'
-    path_t1ce = '/home/yue/Desktop/data/brain_HGG/train/t1ce/'
+    # path_flair = '/home/yue/Desktop/data/brain_HGG/train/flair/'
+    # path_t1 = '/home/yue/Desktop/data/brain_HGG/train/t1/'
+    # path_t2 = '/home/yue/Desktop/data/brain_HGG/train/t2/'
+    # path_t1ce = '/home/yue/Desktop/data/brain_HGG/train/t1ce/'
+
+    path = options['root_path']
 
     while 1:
         # np.random.shuffle(all_files)
         for file in all_files:
 
-            flair = np.load(path_flair + file + '_flair.npy')
-            t1 = np.load(path_t1 + file + '_t1.npy')
-            t2 = np.load(path_t2 + file + '_t2.npy')
-            t1ce = np.load(path_t1ce + file + '_t1ce.npy')
+            # flair = np.load(path_flair + file + '_flair.npy')
+            # t1 = np.load(path_t1 + file + '_t1.npy')
+            # t2 = np.load(path_t2 + file + '_t2.npy')
+            # t1ce = np.load(path_t1ce + file + '_t1ce.npy')
+            # data = np.array([flair, t2, t1, t1ce])
+            # data = np.transpose(data, axes=[1, 2, 3, 0])
+            # data_norm = np.array([norm(flair), norm(t2), norm(t1), norm(t1ce)])
+            # data_norm = np.transpose(data_norm, axes=[1, 2, 3, 0])
+            # labels = np.load('/home/yue/Desktop/data/brain_HGG/train/seg/' + file + '_seg.npy')
+            # yield data, data_norm, labels
+
+            p = file
+            flair = load_nii(os.path.join(path, p, p+ '_flair.nii.gz')).get_data()
+                       
+            t2 = load_nii(os.path.join(path, p,p+ '_t2.nii.gz')).get_data()
+                        
+            t1 = load_nii(os.path.join(path, p, p + '_t1.nii.gz')).get_data()
+                        
+            t1ce = load_nii(os.path.join(path, p, p + '_t1ce.nii.gz')).get_data()
             data = np.array([flair, t2, t1, t1ce])
             data = np.transpose(data, axes=[1, 2, 3, 0])
+
+
+
             data_norm = np.array([norm(flair), norm(t2), norm(t1), norm(t1ce)])
             data_norm = np.transpose(data_norm, axes=[1, 2, 3, 0])
-            labels = np.load('/home/yue/Desktop/data/brain_HGG/train/seg/' + file + '_seg.npy')
+                           
+            labels = load_nii(os.path.join(path, p, p+'_seg.npy')).get_data()
+            # image_names = np.stack(filter(None, [flair_names, t2_names, t1_names, t1ce_names]), axis=1)
+
             yield data, data_norm, labels
 
 
@@ -182,7 +206,7 @@ def main(visualize=False, preprocess=False):
         for line in f:
             test_files.append(line[:-1])
 
-    options = parse_inputs()
+    
     OFFSET_H = options['offset_h']
     OFFSET_W = options['offset_w']
     OFFSET_C = options['offset_c']
@@ -201,7 +225,7 @@ def main(visualize=False, preprocess=False):
 
     net = dense_model(patch_size=(32, 32, 32), num_classes=5)
     net.summary()
-    net.load_weights('dense.hdf5')
+    net.load_weights(options['model_path'])
     print 'weights loaded!'
 
     data_gen_test = vox_generator_test(test_files)
