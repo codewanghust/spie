@@ -197,7 +197,7 @@ def vox_generator_test(all_files):
             data_norm = np.array([norm(flair), norm(t2), norm(t1), norm(t1ce)])
             data_norm = np.transpose(data_norm, axes=[1, 2, 3, 0])
                            
-            labels = load_nii(os.path.join(path, p, p+'_seg.npy')).get_data()
+            labels = load_nii(os.path.join(path, p, p+'_seg.nii.gz')).get_data()
             # image_names = np.stack(filter(None, [flair_names, t2_names, t1_names, t1ce_names]), axis=1)
 
             yield data, data_norm, labels
