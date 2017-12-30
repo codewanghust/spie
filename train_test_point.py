@@ -243,6 +243,7 @@ def main():
       
         steps_per_epoch=train_steps_per_epoch,
         workers=queue,
+        use_multiprocessing=True,
         max_q_size=queue,
         epochs=epochs
     )
