@@ -190,7 +190,6 @@ def get_xy(
 
                 ]
     else:
-        print '********************'
         y = keras.utils.to_categorical(np.copy(y).astype(dtype=np.bool), num_classes=nlabels)
     x = np.transpose(x, axes=[0, 2, 3, 4, 1])
     return x, y
