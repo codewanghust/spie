@@ -198,6 +198,7 @@ def get_xy(
                         keras.utils.to_categorical(y,num_classes=nlabels).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], nlabels]),
                         pred_size)
         print ('******')
+        y = np.squeeze(y)
     x = np.transpose(x, axes=[0, 2, 3, 4, 1])
     print (x.shape)
     print (y.shape)
