@@ -111,13 +111,13 @@ def get_names_from_path(options):
 
 def center_model(patch_size, num_classes):
     model = Sequential()
-    model.add(Conv3D(64,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first', input_shape=(4, patch_size[0],patch_size[0],patch_size[0])))
-    model.add(Conv3D(64,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first'))
-    model.add(MaxPooling3D(pool_size=(3, 3, 3), strides=2, data_format='channels_first'))
+    model.add(Conv3D(64,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_last', input_shape=( patch_size[0],patch_size[0],patch_size[0],4)))
+    model.add(Conv3D(64,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_last'))
+    model.add(MaxPooling3D(pool_size=(3, 3, 3), strides=2, data_format='channels_last'))
 
-    model.add(Conv3D(128,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first'))
-    model.add(Conv3D(128,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_first'))
-    model.add(MaxPooling3D(pool_size=(3, 3, 3), strides=2, data_format='channels_first'))
+    model.add(Conv3D(128,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_last'))
+    model.add(Conv3D(128,(3,3,3),strides=1, padding='same',activation= 'relu',data_format = 'channels_last'))
+    model.add(MaxPooling3D(pool_size=(3, 3, 3), strides=2, data_format='channels_last'))
 
     model.add(Flatten())
 
