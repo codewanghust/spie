@@ -191,9 +191,16 @@ def get_xy(
                 ]
     else:
         y = keras.utils.to_categorical(np.copy(y).astype(dtype=np.bool), num_classes=nlabels)
+
+
+        # center_crop_3d_cube_ignore_first_liast_dim(
+                        # keras.utils.to_categorical(y,num_classes=nlabels).reshape([y.shape[0], y.shape[1], y.shape[2], y.shape[3], nlabels]),
+                        # pred_size)
         print ('******')
     x = np.transpose(x, axes=[0, 2, 3, 4, 1])
     print (x.shape)
+    print (y.shape)
+    print '+++++++'
     return x, y
 class threadsafe_iter:
     """Takes an iterator/generator and makes it thread-safe by
