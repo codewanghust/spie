@@ -193,6 +193,7 @@ def get_xy(
         y = keras.utils.to_categorical(np.copy(y).astype(dtype=np.bool), num_classes=nlabels)
         print ('******')
     x = np.transpose(x, axes=[0, 2, 3, 4, 1])
+    print x.shape
     return x, y
 class threadsafe_iter:
     """Takes an iterator/generator and makes it thread-safe by
