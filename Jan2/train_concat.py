@@ -222,9 +222,9 @@ def train():
                                                               learning_phase(): 1})
                     acc_pi.append([acc_ft, acc_t1c])
                     loss_pi.append(l)
-                    n_pos = len(np.where(label_batch > 0)[0])
+                    n_pos_sum = np.sum(np.reshape(label_batch[0], (-1, 2)), axis=0)
                     print 'epoch-patient: %d, %d, iter: %d-%d, p%%: %.4f%%, loss: %.4f, acc_flair_t2: %.2f%%, acc_t1_t1ce: %.2f%%' % \
-                          (ei + 1, pi + 1, nb + 1, n_batches, n_pos/float(np.prod(label_batch[0].shape)), l, acc_ft, acc_t1c)
+                          (ei + 1, pi + 1, nb + 1, n_batches, n_pos_sum[1]/float(np.sum(n_pos_sum)), l, acc_ft, acc_t1c)
 
                 print 'patient loss: %.4f, patient acc: %.4f' % (np.mean(loss_pi), np.mean(acc_pi))
 
