@@ -8,6 +8,7 @@ from nibabel import load as load_nii
 import os
 import argparse
 import keras
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 def parse_inputs():
 
