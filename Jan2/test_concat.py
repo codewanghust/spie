@@ -241,7 +241,7 @@ def main():
                                                         learning_phase(): 0}
                                              )
                             pred[offset_ph:offset_ph + PSIZE, offset_pw:offset_pw + PSIZE, offset_pc:offset_pc + PSIZE,
-                            :] += np.squeeze(score)
+                            :] += np.squeeze(score[-1])
 
             pred = np.argmax(pred, axis=-1)
             pred = pred.astype(int)
