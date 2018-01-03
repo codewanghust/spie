@@ -3,20 +3,20 @@ from tensorflow.contrib.keras.python.keras.layers import Conv3D, MaxPooling3D, U
 from tf_layers import *
 
 
-def BraTS2ScaleDenseNetConcat(input):
+def BraTS2ScaleDenseNetConcat(input, name):
 
-    x = Conv3D(filters=24, kernel_size=3, strides=1, padding='same')(input)
-    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, rep=6)
+    x = Conv3D(filters=24, kernel_size=3, strides=1, padding='same', name=name+'_conv_init')(input)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, rep=6, name=name+'_denseblock1')
 
     out_15rf = BatchNormalization(center=True, scale=True)(x)
     out_15rf = Activation('relu')(out_15rf)
-    out_15rf = Conv3DWithBN(out_15rf, filters=96, ksize=1, strides=1, name='out_15_postconv')
+    out_15rf = Conv3DWithBN(out_15rf, filters=96, ksize=1, strides=1, name=name + '_out_15_postconv')
 
-    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, rep=6)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, rep=6, name=name+'_denseblock2')
 
     out_27rf = BatchNormalization(center=True, scale=True)(x)
     out_27rf = Activation('relu')(out_27rf)
-    out_27rf = Conv3DWithBN(out_27rf, filters=168, ksize=1, strides=1, name='out_27_postconv')
+    out_27rf = Conv3DWithBN(out_27rf, filters=168, ksize=1, strides=1, name=name + '_out_27_postconv')
 
     return out_15rf, out_27rf
 

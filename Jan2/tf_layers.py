@@ -203,12 +203,13 @@ def DenseNetTransit(x, rate=1, name=None):
     return x
 
 
-def DenseNetUnit3D(x, growth_rate, ksize, rep, bn_decay=0.99):
+def DenseNetUnit3D(x, growth_rate, ksize, rep, bn_decay=0.99, name=None):
     for i in range(rep):
         concat = x
-        x = BatchNormalization(center=True, scale=True, momentum=bn_decay)(x)
+        x = BatchNormalization(center=True, scale=True, momentum=bn_decay, name=name+'_bn_rep_'+str(i))(x)
         x = Activation('relu')(x)
-        x = Conv3D(filters=growth_rate, kernel_size=ksize, padding='same', kernel_initializer='glorot_normal', use_bias=False)(x)
+        x = Conv3D(filters=growth_rate, kernel_size=ksize, padding='same',
+                   kernel_initializer='glorot_normal', use_bias=False, name=name+'_conv_rep_'+str(i))(x)
         x = concatenate([concat, x])
     return x
 

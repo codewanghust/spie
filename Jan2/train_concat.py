@@ -170,16 +170,16 @@ def train():
     flair_t2_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 2))
     t1_t1ce_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 5))
 
-    flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node)
-    t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node)
+    flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
+    t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
 
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
 
-    flair_t2_15 = Conv3D(2, kernel_size=1, strides=1, padding='same')(flair_t2_15)
-    flair_t2_27 = Conv3D(2, kernel_size=1, strides=1, padding='same')(flair_t2_27)
-    t1_t1ce_15 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same')(t1_t1ce_15)
-    t1_t1ce_27 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same')(t1_t1ce_27)
+    flair_t2_15 = Conv3D(2, kernel_size=1, strides=1, padding='same', name='flair_t2_15_cls')(flair_t2_15)
+    flair_t2_27 = Conv3D(2, kernel_size=1, strides=1, padding='same', name='flair_t2_27_cls')(flair_t2_27)
+    t1_t1ce_15 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_15_cls')(t1_t1ce_15)
+    t1_t1ce_27 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_27_cls')(t1_t1ce_27)
 
     flair_t2_score = flair_t2_15[:, 13:25, 13:25, 13:25, :] + \
                      flair_t2_27[:, 13:25, 13:25, 13:25, :]
@@ -223,7 +223,7 @@ def train():
                     acc_pi.append([acc_ft, acc_t1c])
                     loss_pi.append(l)
                     n_pos_sum = np.sum(np.reshape(label_batch[0], (-1, 2)), axis=0)
-                    print 'epoch-patient: %d, %d, iter: %d-%d, p%%: %.4f%%, loss: %.4f, acc_flair_t2: %.2f%%, acc_t1_t1ce: %.2f%%' % \
+                    print 'epoch-patient: %d, %d, iter: %d-%d, p%%: %.4f, loss: %.4f, acc_flair_t2: %.2f%%, acc_t1_t1ce: %.2f%%' % \
                           (ei + 1, pi + 1, nb + 1, n_batches, n_pos_sum[1]/float(np.sum(n_pos_sum)), l, acc_ft, acc_t1c)
 
                 print 'patient loss: %.4f, patient acc: %.4f' % (np.mean(loss_pi), np.mean(acc_pi))

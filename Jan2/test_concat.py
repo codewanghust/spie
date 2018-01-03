@@ -35,7 +35,7 @@ def parse_inputs():
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
     parser.add_argument('-r', '--root-path', dest='root_path', default='/mnt/disk1/dat/lchen63/brain/data/data2')
     parser.add_argument('-m', '--model-path', dest='model_path',
-                        default='BraTS2ScaleDenseNetP3')
+                        default='BraTS2ScaleDenseNetConcat-0')
     parser.add_argument('-ow', '--offset-width', dest='offset_w', type=int, default=12)
     parser.add_argument('-oh', '--offset-height', dest='offset_h', type=int, default=12)
     parser.add_argument('-oc', '--offset-channel', dest='offset_c', nargs='+', type=int, default=12)
@@ -48,6 +48,13 @@ def parse_inputs():
 
 
 options = parse_inputs()
+
+
+def segmentation_loss(y_true, y_pred, n_classes):
+    y_true = tf.reshape(y_true, (-1, n_classes))
+    y_pred = tf.reshape(y_pred, (-1, n_classes))
+    return tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true,
+                                                                  logits=y_pred))
 
 
 def vox_preprocess(vox):
@@ -202,17 +209,18 @@ def main():
     flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
     t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
 
-    flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node)
-    t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node)
+    flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
+    t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
 
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
 
-    t1_t1ce_15 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same')(t1_t1ce_15)
-    t1_t1ce_27 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same')(t1_t1ce_27)
+    t1_t1ce_15 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_15_cls')(t1_t1ce_15)
+    t1_t1ce_27 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_27_cls')(t1_t1ce_27)
 
     t1_t1ce_score = t1_t1ce_15[:, 13:25, 13:25, 13:25, :] + \
                     t1_t1ce_27[:, 13:25, 13:25, 13:25, :]
+
 
     saver = tf.train.Saver()
     data_gen_test = vox_generator_test(test_files)
@@ -241,7 +249,7 @@ def main():
                                                         learning_phase(): 0}
                                              )
                             pred[offset_ph:offset_ph + PSIZE, offset_pw:offset_pw + PSIZE, offset_pc:offset_pc + PSIZE,
-                            :] += np.squeeze(score)
+                            :] += np.squeeze(score[-1])
 
             pred = np.argmax(pred, axis=-1)
             pred = pred.astype(int)
