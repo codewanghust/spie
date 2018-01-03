@@ -208,6 +208,9 @@ def main():
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
 
+    flair_t2_15 = Conv3D(2, kernel_size=1, strides=1, padding='same')(flair_t2_15)
+    flair_t2_27 = Conv3D(2, kernel_size=1, strides=1, padding='same')(flair_t2_27)
+
     t1_t1ce_15 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same')(t1_t1ce_15)
     t1_t1ce_27 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same')(t1_t1ce_27)
 
