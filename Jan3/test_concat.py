@@ -242,6 +242,7 @@ def main():
                         offset_pc = offset_c + OFFSET_PC
                         data = x[offset_h:offset_h + HSIZE, offset_w:offset_w + WSIZE, offset_c:offset_c + CSIZE, :]
                         data_norm = x_n[offset_h:offset_h + HSIZE, offset_w:offset_w + WSIZE, offset_c:offset_c + CSIZE, :]
+                        data_norm = np.expand_dims(data_norm, 0)
                         if not np.max(data) == 0 and np.min(data) == 0:
                             score = sess.run(fetches=t1_t1ce_score,
                                              feed_dict={flair_t2_node: data_norm[:, :, :, :, :2],
@@ -249,7 +250,7 @@ def main():
                                                         learning_phase(): 0}
                                              )
                             pred[offset_ph:offset_ph + PSIZE, offset_pw:offset_pw + PSIZE, offset_pc:offset_pc + PSIZE,
-                            :] += np.squeeze(score[-1])
+                            :] += np.squeeze(score)
 
             pred = np.argmax(pred, axis=-1)
             pred = pred.astype(int)
