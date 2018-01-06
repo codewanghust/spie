@@ -8,14 +8,13 @@ from nibabel import load as load_nii
 import os
 import argparse
 import keras
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 def parse_inputs():
 
     parser = argparse.ArgumentParser(description='yyy')
     parser.add_argument('-r', '--root-path', dest='root_path', default='/media/yue/Data/spie/Brats17TrainingData/HGG')
-    parser.add_argument('-sp', '--save-path', dest='save_path', default='BraTS2ScaleDenseNetConcat')
-    parser.add_argument('-lp', '--load-path', dest='load_path', default='BraTS2ScaleDenseNetConcat')
+    parser.add_argument('-sp', '--save-path', dest='save_path', default='NoneDense')
+    parser.add_argument('-lp', '--load-path', dest='load_path', default='NoneDense')
     parser.add_argument('-ow', '--offset-width', dest='offset_w', type=int, default=12)
     parser.add_argument('-oh', '--offset-height', dest='offset_h', type=int, default=12)
     parser.add_argument('-oc', '--offset-channel', dest='offset_c', nargs='+', type=int, default=12)
@@ -171,8 +170,8 @@ def train():
     flair_t2_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 2))
     t1_t1ce_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 5))
 
-    flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
-    t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+    flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
+    t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
 
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])

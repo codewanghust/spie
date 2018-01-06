@@ -35,7 +35,7 @@ def parse_inputs():
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
     parser.add_argument('-r', '--root-path', dest='root_path', default='/mnt/disk1/dat/lchen63/brain/data/data2')
     parser.add_argument('-m', '--model-path', dest='model_path',
-                        default='BraTS2ScaleDenseNetConcat-0')
+                        default='NoneDense-0')
     parser.add_argument('-ow', '--offset-width', dest='offset_w', type=int, default=12)
     parser.add_argument('-oh', '--offset-height', dest='offset_h', type=int, default=12)
     parser.add_argument('-oc', '--offset-channel', dest='offset_c', nargs='+', type=int, default=12)
@@ -209,8 +209,8 @@ def main():
     flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
     t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
 
-    flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
-    t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+    flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
+    t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
 
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
@@ -260,7 +260,7 @@ def main():
         dice = np.array(dice)
         print 'mean dice:'
         print np.mean(dice, axis=0)
-        np.save('pred_scale2', dice)
+        np.save('none_dense_pred', dice)
         print 'pred saved'
 
 
