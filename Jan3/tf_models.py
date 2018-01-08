@@ -44,6 +44,23 @@ def BraTS2ScaleDenseNetConcat(input, name):
 
     return out_15rf, out_27rf
 
+def BraTS2ScaleDenseNetConcat_large(input, name):
+
+    x = Conv3D(filters=48, kernel_size=3, strides=1, padding='same', name=name+'_conv_init')(input)
+    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, rep=6, name=name+'_denseblock1')
+
+    out_15rf = BatchNormalization(center=True, scale=True)(x)
+    out_15rf = Activation('relu')(out_15rf)
+    out_15rf = Conv3DWithBN(out_15rf, filters=192, ksize=1, strides=1, name=name + '_out_15_postconv')
+
+    x = DenseNetUnit3D(x, growth_rate=24, ksize=3, rep=6, name=name+'_denseblock2')
+
+    out_27rf = BatchNormalization(center=True, scale=True)(x)
+    out_27rf = Activation('relu')(out_27rf)
+    out_27rf = Conv3DWithBN(out_27rf, filters=336, ksize=1, strides=1, name=name + '_out_27_postconv')
+
+    return out_15rf, out_27rf
+
 
 def BraTS2ScaleDenseNet(input, num_labels):
 

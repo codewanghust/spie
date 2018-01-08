@@ -25,6 +25,7 @@ def parse_inputs():
     parser.add_argument('-bs', '--batch-size', dest='batch_size', type=int, default=2)
     parser.add_argument('-e', '--num-epochs', dest='num_epochs', type=int, default=3)
     parser.add_argument('-c', '--continue-training', dest='continue_training', type=bool, default=False)
+    parser.add_argument('-d', '--dense', dest='dense', type=bool, default=False)
 
     return vars(parser.parse_args())
 
@@ -155,6 +156,7 @@ def train():
     HSIZE = options['hsize']
     WSIZE = options['wsize']
     CSIZE = options['csize']
+    DENSE= options['dense']
     BATCH_SIZE = options['batch_size']
     continue_training = options['continue_training']
 
@@ -170,8 +172,13 @@ def train():
     flair_t2_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 2))
     t1_t1ce_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 5))
 
-    flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
-    t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
+    if DENSE:
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
+    else:
+
+        flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
 
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
