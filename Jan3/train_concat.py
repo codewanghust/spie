@@ -14,8 +14,8 @@ def parse_inputs():
 
     parser = argparse.ArgumentParser(description='yyy')
     parser.add_argument('-r', '--root-path', dest='root_path', default='/media/yue/Data/spie/Brats17TrainingData/HGG')
-    parser.add_argument('-sp', '--save-path', dest='save_path', default='NoneDense')
-    parser.add_argument('-lp', '--load-path', dest='load_path', default='NoneDense')
+    parser.add_argument('-sp', '--save-path', dest='save_path', default='dense24_correction')
+    parser.add_argument('-lp', '--load-path', dest='load_path', default='dense24_correction')
     parser.add_argument('-ow', '--offset-width', dest='offset_w', type=int, default=12)
     parser.add_argument('-oh', '--offset-height', dest='offset_h', type=int, default=12)
     parser.add_argument('-oc', '--offset-channel', dest='offset_c', nargs='+', type=int, default=12)
@@ -24,9 +24,10 @@ def parse_inputs():
     parser.add_argument('-cs', '--channel-size', dest='csize', type=int, default=38)
     parser.add_argument('-ps', '--pred-size', dest='psize', type=int, default=12)
     parser.add_argument('-bs', '--batch-size', dest='batch_size', type=int, default=2)
-    parser.add_argument('-e', '--num-epochs', dest='num_epochs', type=int, default=3)
+    parser.add_argument('-e', '--num-epochs', dest='num_epochs', type=int, default=5)
     parser.add_argument('-c', '--continue-training', dest='continue_training', type=bool, default=False)
-    parser.add_argument('-d', '--dense', dest='dense', type=bool, default=False)
+    parser.add_argument('-mn', '--model_name', dest='model_name', type=str, default='dense24')
+    parser.add_argument('-nc', '--n4correction', dest='correction', type=bool, default=False)
 
     return vars(parser.parse_args())
 
@@ -113,14 +114,21 @@ def dice_coef_np(y_true, y_pred, num_classes):
     return (2. * intersection) / (np.sum(y_true, axis=0) + np.sum(y_pred, axis=0))
 
 
-def vox_generator(all_files, n_pos, n_neg):
+def vox_generator(all_files, n_pos, n_neg,correction= False):
     path = options['root_path']
     while 1:
         for file in all_files:
-            flair = load_nii(os.path.join(path, file, file + '_flair.nii.gz')).get_data()
-            t2 = load_nii(os.path.join(path, file, file + '_t2.nii.gz')).get_data()
-            t1 = load_nii(os.path.join(path, file, file + '_t1.nii.gz')).get_data()
-            t1ce = load_nii(os.path.join(path, file, file + '_t1ce.nii.gz')).get_data()
+            if correction:
+                flair = load_nii(os.path.join(path, file, file + '_flair_correction.nii.gz')).get_data()
+                t2 = load_nii(os.path.join(path, file, file + '_t2_correction.nii.gz')).get_data()
+                t1 = load_nii(os.path.join(path, file, file + '_t1_correction.nii.gz')).get_data()
+                t1ce = load_nii(os.path.join(path, file, file + '_t1ce_correction.nii.gz')).get_data()
+            else:
+
+                flair = load_nii(os.path.join(path, file, file + '_flair.nii.gz')).get_data()
+                t2 = load_nii(os.path.join(path, file, file + '_t2.nii.gz')).get_data()
+                t1 = load_nii(os.path.join(path, file, file + '_t1.nii.gz')).get_data()
+                t1ce = load_nii(os.path.join(path, file, file + '_t1ce.nii.gz')).get_data()
 
             data_norm = np.array([norm(flair), norm(t2), norm(t1), norm(t1ce)])
             data_norm = np.transpose(data_norm, axes=[1, 2, 3, 0])
@@ -157,7 +165,7 @@ def train():
     HSIZE = options['hsize']
     WSIZE = options['wsize']
     CSIZE = options['csize']
-    DENSE= options['dense']
+    model_name= options['model_name']
     BATCH_SIZE = options['batch_size']
     continue_training = options['continue_training']
 
@@ -173,13 +181,20 @@ def train():
     flair_t2_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 2))
     t1_t1ce_gt_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE, 5))
 
-    if DENSE:
+    if model_name == 'dense48':
         flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
-    else:
+    elif model_name == 'plain':
 
         flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
+
+    elif model_name == 'dense24':
+
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+    else:
+        print' No such model name '
 
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
@@ -206,7 +221,7 @@ def train():
         optimizer = tf.train.AdamOptimizer(learning_rate=5e-4).minimize(loss)
 
     saver = tf.train.Saver(max_to_keep=15)
-    data_gen_train = vox_generator(all_files=files, n_pos=200, n_neg=200)
+    data_gen_train = vox_generator(all_files=files, n_pos=200, n_neg=200,correction = options['correction'])
 
     with tf.Session() as sess:
         if continue_training:
