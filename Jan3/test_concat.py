@@ -43,7 +43,7 @@ def parse_inputs():
     parser.add_argument('-hs', '--height-size', dest='hsize', type=int, default=38)
     parser.add_argument('-cs', '--channel-size', dest='csize', type=int, default=38)
     parser.add_argument('-ps', '--pred-size', dest='psize', type=int, default=12)
-
+    parser.add_argument('-mn', '--model-name', dest='model_name', type=str, default='dense24')   
     return vars(parser.parse_args())
 
 
@@ -197,7 +197,7 @@ def main():
     CSIZE = options['csize']
     PSIZE = options['psize']
     SAVE_PATH = options['model_path']
-
+    model_name = options['model_name']
     OFFSET_PH = (HSIZE - PSIZE) / 2
     OFFSET_PW = (WSIZE - PSIZE) / 2
     OFFSET_PC = (CSIZE - PSIZE) / 2
@@ -209,9 +209,16 @@ def main():
     flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
     t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
 
-    flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
-    t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
-
+    if model_name == 'plain':
+        flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
+    elif model_name == 'dense24':
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+    elif model_name == 'dense48':
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
+    
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
 
@@ -260,7 +267,7 @@ def main():
         dice = np.array(dice)
         print 'mean dice:'
         print np.mean(dice, axis=0)
-        np.save('none_dense_pred', dice)
+        np.save(model_name, dice)
         print 'pred saved'
 
 
