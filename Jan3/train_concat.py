@@ -119,10 +119,10 @@ def vox_generator(all_files, n_pos, n_neg,correction= False):
     while 1:
         for file in all_files:
             if correction:
-                flair = load_nii(os.path.join(path, file, file + '_flair_correction.nii.gz')).get_data()
-                t2 = load_nii(os.path.join(path, file, file + '_t2_correction.nii.gz')).get_data()
-                t1 = load_nii(os.path.join(path, file, file + '_t1_correction.nii.gz')).get_data()
-                t1ce = load_nii(os.path.join(path, file, file + '_t1ce_correction.nii.gz')).get_data()
+                flair = load_nii(os.path.join(path, file, file + '_flair_corrected.nii.gz')).get_data()
+                t2 = load_nii(os.path.join(path, file, file + '_t2_corrected.nii.gz')).get_data()
+                t1 = load_nii(os.path.join(path, file, file + '_t1_corrected.nii.gz')).get_data()
+                t1ce = load_nii(os.path.join(path, file, file + '_t1ce_corrected.nii.gz')).get_data()
             else:
 
                 flair = load_nii(os.path.join(path, file, file + '_flair.nii.gz')).get_data()
