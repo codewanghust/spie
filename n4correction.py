@@ -6,7 +6,7 @@ from skimage.transform import resize
 from multiprocessing import Pool, cpu_count
 
 def n4_correction(im_input):
-    command = 'N4BiasFieldCorrection -d 3 -i ' + im_input + ' ' + ' -s 3 -o ' +  im_input.replace('.nii.gz', '_corrected.nii.gz')
+    command = 'N4BiasFieldCorrection -d 3 -i ' + im_input + ' ' + ' -s 3 -c [50x50x30x20] -b [300] -o ' +  im_input.replace('.nii.gz', '_corrected.nii.gz')
     os.system(command)
 
 def batch_works(k):
