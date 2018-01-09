@@ -8,7 +8,7 @@ from nibabel import load as load_nii
 import os
 import argparse
 import keras
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 def parse_inputs():
 
@@ -28,12 +28,12 @@ def parse_inputs():
     parser.add_argument('-c', '--continue-training', dest='continue_training', type=bool, default=False)
     parser.add_argument('-mn', '--model_name', dest='model_name', type=str, default='dense24')
     parser.add_argument('-nc', '--n4correction', dest='correction', type=bool, default=False)
-
+    parser.add_argument('-gpu', '--gpu_id', dest='gpu_id', type=str, default='0')
     return vars(parser.parse_args())
 
 options = parse_inputs()
 
-
+os.environ["CUDA_VISIBLE_DEVICES"] = options['gpu_id']
 def acc_tf(y_pred, y_true):
     correct_prediction = tf.equal(tf.cast(tf.argmax(y_pred, -1), tf.int32), tf.cast(tf.argmax(y_true, -1), tf.int32))
     return 100 * tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
