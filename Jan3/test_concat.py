@@ -43,6 +43,7 @@ def parse_inputs():
     parser.add_argument('-hs', '--height-size', dest='hsize', type=int, default=38)
     parser.add_argument('-cs', '--channel-size', dest='csize', type=int, default=38)
     parser.add_argument('-ps', '--pred-size', dest='psize', type=int, default=12)
+    parser.add_argument('-nc', '--correction', dest='correction', type=bool, default=True)
     parser.add_argument('-mn', '--model-name', dest='model_name', type=str, default='dense24')   
     return vars(parser.parse_args())
 
@@ -164,13 +165,20 @@ def vox_generator_test(all_files):
     while 1:
         for file in all_files:
             p = file
-            flair = load_nii(os.path.join(path, p, p + '_flair.nii.gz')).get_data()
 
-            t2 = load_nii(os.path.join(path, p, p + '_t2.nii.gz')).get_data()
+            if option['correction']:
+                flair = load_nii(os.path.join(path, file, file + '_flair_corrected.nii.gz')).get_data()
+                t2 = load_nii(os.path.join(path, file, file + '_t2_corrected.nii.gz')).get_data()
+                t1 = load_nii(os.path.join(path, file, file + '_t1_corrected.nii.gz')).get_data()
+                t1ce = load_nii(os.path.join(path, file, file + '_t1ce_corrected.nii.gz')).get_data()
+            else:
 
-            t1 = load_nii(os.path.join(path, p, p + '_t1.nii.gz')).get_data()
+                flair = load_nii(os.path.join(path, file, file + '_flair.nii.gz')).get_data()
+                t2 = load_nii(os.path.join(path, file, file + '_t2.nii.gz')).get_data()
+                t1 = load_nii(os.path.join(path, file, file + '_t1.nii.gz')).get_data()
+                t1ce = load_nii(os.path.join(path, file, file + '_t1ce.nii.gz')).get_data()
 
-            t1ce = load_nii(os.path.join(path, p, p + '_t1ce.nii.gz')).get_data()
+         
             data = np.array([flair, t2, t1, t1ce])
             data = np.transpose(data, axes=[1, 2, 3, 0])
 
