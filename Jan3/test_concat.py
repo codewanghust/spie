@@ -18,7 +18,6 @@ from nibabel import load as load_nii
 from sklearn.preprocessing import scale
 import matplotlib.pyplot as plt
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 # SAVE_PATH = 'unet3d_baseline.hdf5'
@@ -45,10 +44,12 @@ def parse_inputs():
     parser.add_argument('-ps', '--pred-size', dest='psize', type=int, default=12)
     parser.add_argument('-nc', '--correction', dest='correction', type=bool, default=True)
     parser.add_argument('-mn', '--model-name', dest='model_name', type=str, default='dense24')   
+    parser.add_argument('-gpu', '--gpu', dest='gpu', type=str, default='0')
     return vars(parser.parse_args())
 
 
 options = parse_inputs()
+os.environ["CUDA_VISIBLE_DEVICES"] = options['gpu']
 
 
 def segmentation_loss(y_true, y_pred, n_classes):
