@@ -167,7 +167,7 @@ def vox_generator_test(all_files):
         for file in all_files:
             p = file
 
-            if option['correction']:
+            if options['correction']:
                 flair = load_nii(os.path.join(path, file, file + '_flair_corrected.nii.gz')).get_data()
                 t2 = load_nii(os.path.join(path, file, file + '_t2_corrected.nii.gz')).get_data()
                 t1 = load_nii(os.path.join(path, file, file + '_t1_corrected.nii.gz')).get_data()
