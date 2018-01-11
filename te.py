@@ -18,7 +18,7 @@ def parse_inputs():
 options = parse_inputs()
 model_name = options['model_name']
 root = options['root']
-
+inx = options['inx']
 
 dice_whole =  np.load( root +'/' +   model_name + '_dice_whole.npy')
 dice_core = np.expand_dims(np.load( root + '/' + model_name + '_dice_core.npy')[:,1],axis = 1)
