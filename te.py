@@ -28,6 +28,7 @@ print dice_whole.shape
 
 b = np.concatenate((dice_whole, dice_core,dice_et), axis=0)
 
+print b.shape
 
 
 
