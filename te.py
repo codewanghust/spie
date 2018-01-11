@@ -11,6 +11,7 @@ def parse_inputs():
   
     parser.add_argument('-mn', '--model_name', dest='model_name', type=str, default='dense24')
     parser.add_argument('-r', '--root', dest='root', type=str, default='')
+    parser.add_argument('-i', '--inx', dest='inx', type=int, default=1)
     return vars(parser.parse_args())
 
 
@@ -44,7 +45,7 @@ print b.shape
 # print (b.shape)
 # print (b.shape[0])
 
-c =  b[b[:,1].argsort()]
+c =  b[b[:,inx].argsort()]
 # # for i in range(b.shape[0]):
 
 print (c[18:])
