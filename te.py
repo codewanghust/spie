@@ -19,9 +19,9 @@ model_name = options['model_name']
 root = options['root']
 
 
-dice_whole = np.load( root +'/' +   model_name + '_dice_whole.npy')
-dice_core = np.load( root + '/' + model_name + '_dice_core.npy')
-dice_et = np.load(root + '/' +  model_name + '_dice_enhance.npy')
+dice_whole = np.load( root +'/' +   model_name + '_dice_whole.npy')[:,1]
+dice_core = np.load( root + '/' + model_name + '_dice_core.npy')[:,1]
+dice_et = np.load(root + '/' +  model_name + '_dice_enhance.npy')[:,1]
 
 print dice_whole
 print dice_whole.shape 
