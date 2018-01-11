@@ -19,14 +19,14 @@ model_name = options['model_name']
 root = options['root']
 
 
-dice_whole = np.load( root +'/' +   model_name + '_dice_whole.npy')[:,1]
-dice_core = np.load( root + '/' + model_name + '_dice_core.npy')[:,1]
-dice_et = np.load(root + '/' +  model_name + '_dice_enhance.npy')[:,1]
+dice_whole = np.expand_dims( np.load( root +'/' +   model_name + '_dice_whole.npy')[:,1],axis = 1)
+dice_core = np.expand_dims(np.load( root + '/' + model_name + '_dice_core.npy')[:,1],axis = 1)
+dice_et = np.expand_dims(np.load(root + '/' +  model_name + '_dice_enhance.npy')[:,1],axis = 1)
 
 print dice_whole
 print dice_whole.shape 
 
-b = np.concatenate((dice_whole, dice_core,dice_et), axis=0)
+b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
 
 print b.shape
 
