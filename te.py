@@ -16,7 +16,7 @@ def parse_inputs():
 
 options = parse_inputs()
 model_name = options['model_name']
-dice_whole = np.load( root +'/'  model_name + '_dice_whole.npy')
+dice_whole = np.load( root +'/' +   model_name + '_dice_whole.npy')
 dice_core = np.load( root + '/' + model_name + '_dice_core.npy')
 dice_et = np.load(root + '/' +  model_name + '_dice_enhance.npy')
 
