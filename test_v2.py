@@ -159,27 +159,12 @@ def norm(image):
 
 
 def vox_generator_test(all_files):
-    # path_flair = '/home/yue/Desktop/data/brain_HGG/train/flair/'
-    # path_t1 = '/home/yue/Desktop/data/brain_HGG/train/t1/'
-    # path_t2 = '/home/yue/Desktop/data/brain_HGG/train/t2/'
-    # path_t1ce = '/home/yue/Desktop/data/brain_HGG/train/t1ce/'
+   
 
     path = options['root_path']
 
     while 1:
-        # np.random.shuffle(all_files)
         for file in all_files:
-
-            # flair = np.load(path_flair + file + '_flair.npy')
-            # t1 = np.load(path_t1 + file + '_t1.npy')
-            # t2 = np.load(path_t2 + file + '_t2.npy')
-            # t1ce = np.load(path_t1ce + file + '_t1ce.npy')
-            # data = np.array([flair, t2, t1, t1ce])
-            # data = np.transpose(data, axes=[1, 2, 3, 0])
-            # data_norm = np.array([norm(flair), norm(t2), norm(t1), norm(t1ce)])
-            # data_norm = np.transpose(data_norm, axes=[1, 2, 3, 0])
-            # labels = np.load('/home/yue/Desktop/data/brain_HGG/train/seg/' + file + '_seg.npy')
-            # yield data, data_norm, labels
 
             p = file
             flair = load_nii(os.path.join(path, p, p+ '_flair.nii.gz')).get_data()

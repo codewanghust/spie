@@ -1,6 +1,9 @@
 import os
 from random import shuffle
 import numpy as np
+import subprocess
+from nipype.interfaces.ants import N4BiasFieldCorrection
+
 def generate_list():
 	path = '/Users/chenlele/Project/brain/data/'
 	train = path + 'train/'
@@ -45,17 +48,33 @@ def data_generator(data_list = None, batch_size= 8, augment = False):
 				xs.append(x)
 				ys.append(y)
 			yield (np.array(xs),np.array(ys))
-data_list = generate_list()
-generator= data_generator(data_list,8,False)
-xs , ys = generator.next()
-print len(xs)
-print len(ys)
+def n4normalization(path, n_dims=3, n_iters='[20,20,10,5]'):
+    '''
+    INPUT:  (1) filepath 'path': path to mha T1 or T1c file
+            (2) directory 'parent_dir': parent directory to mha file
+    OUTPUT: writes n4itk normalized image to parent_dir under orig_filename_n.mha
+    '''
+    output_fn = path[:-7] + '__n.nii.gz'
+    # n4_norm(output_fn,n_dim,n_iters)
+    subprocess.call('python n4_bias_correction.py ' + path + ' ' + str(n_dims) + ' ' + n_iters + ' ' + output_fn, shell = True)
+    # N4BiasFieldCorrection(output_image=sys.argv[4])
+    # run n4_bias_correction.py path n_dim n_iters output_fn
 
 
 
 
+n4normalization('/media/lele/DATA/brain/Brats17TrainingData/HGG/Brats17_2013_10_1/Brats17_2013_10_1_t1ce.nii.gz')
 
 
+# import copy
+# from nipype.interfaces.ants import N4BiasFieldCorrection
+# n4 = N4BiasFieldCorrection()
+# n4.inputs.dimension = 3
+# n4.inputs.input_image = '/media/lele/DATA/brain/Brats17TrainingData/HGG/Brats17_2013_10_1/Brats17_2013_10_1_t1ce.nii.gz'
+# n4.inputs.bspline_fitting_distance = 300
+# n4.inputs.shrink_factor = 3
+# n4.inputs.n_iterations = [50,50,30,20]
+# n4.cmdline
+# 'N4BiasFieldCorrection --bspline-fitting [ 300 ] -d 3 --input-image structural.nii --convergence [ 50x50x30x20 ] --output /media/lele/DATA/brain/Brats17TrainingData/HGG/Brats17_2013_10_1/Brats17_2013_10_1_t1ce__correct.nii.gz --shrink-factor 3'
 
-
-
+# print 'hhhehe'
