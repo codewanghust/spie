@@ -18,7 +18,6 @@ from nibabel import load as load_nii
 from sklearn.preprocessing import scale
 import matplotlib.pyplot as plt
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 # SAVE_PATH = 'unet3d_baseline.hdf5'
@@ -43,11 +42,14 @@ def parse_inputs():
     parser.add_argument('-hs', '--height-size', dest='hsize', type=int, default=38)
     parser.add_argument('-cs', '--channel-size', dest='csize', type=int, default=38)
     parser.add_argument('-ps', '--pred-size', dest='psize', type=int, default=12)
+    parser.add_argument('-gpu', '--gpu', dest='gpu', type=str, default='0')
+    parser.add_argument('-mn', '--model_name', dest='model_name', type=str, default='dense24')
 
     return vars(parser.parse_args())
 
 
 options = parse_inputs()
+os.environ["CUDA_VISIBLE_DEVICES"] = options['gpu']
 
 
 def segmentation_loss(y_true, y_pred, n_classes):
@@ -197,6 +199,7 @@ def main():
     CSIZE = options['csize']
     PSIZE = options['psize']
     SAVE_PATH = options['model_path']
+    model_name = options['model_name']
 
     OFFSET_PH = (HSIZE - PSIZE) / 2
     OFFSET_PW = (WSIZE - PSIZE) / 2
@@ -209,8 +212,21 @@ def main():
     flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
     t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
 
-    flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
-    t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+
+    if model_name == 'dense48':
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
+    elif model_name == 'plain':
+
+        flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
+
+    elif model_name == 'dense24':
+
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+    else:
+        print' No such model name '
 
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
@@ -282,9 +298,9 @@ def main():
         print 'mean dice enhance:'
         print np.mean(dice_et, axis=0)
 
-        np.save('dice_whole', dice_whole)
-        np.save('dice_core', dice_core)
-        np.save('dice_enhance', dice_et)
+        np.save(model_name + '_dice_whole', dice_whole)
+        np.save(model_name + '_dice_core', dice_core)
+        np.save(model_name + '_dice_enhance', dice_et)
         print 'pred saved'
 
 
