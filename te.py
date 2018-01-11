@@ -19,7 +19,7 @@ model_name = options['model_name']
 root = options['root']
 
 
-dice_whole = np.expand_dims( np.load( root +'/' +   model_name + '_dice_whole.npy')[:,1],axis = 1)
+dice_whole =  np.load( root +'/' +   model_name + '_dice_whole.npy')
 dice_core = np.expand_dims(np.load( root + '/' + model_name + '_dice_core.npy')[:,1],axis = 1)
 dice_et = np.expand_dims(np.load(root + '/' +  model_name + '_dice_enhance.npy')[:,1],axis = 1)
 
@@ -44,8 +44,8 @@ print b.shape
 # print (b.shape)
 # print (b.shape[0])
 
-# c =  b[b[:,2].argsort()]
+c =  b[b[:,1].argsort()]
 # # for i in range(b.shape[0]):
 
-# print (c[18:])
-# print (c[18:].mean(axis=0))
+print (c[18:])
+print (c[18:].mean(axis=0))
