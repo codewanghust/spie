@@ -10,13 +10,15 @@ def parse_inputs():
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
   
     parser.add_argument('-mn', '--model_name', dest='model_name', type=str, default='dense24')
-    parser.add_argument('-r', '--root', dest='root ', type=str, default='')
+    parser.add_argument('-r', '--root', dest='root', type=str, default='')
     return vars(parser.parse_args())
 
 
 options = parse_inputs()
 model_name = options['model_name']
 root = options['root']
+
+
 dice_whole = np.load( root +'/' +   model_name + '_dice_whole.npy')
 dice_core = np.load( root + '/' + model_name + '_dice_core.npy')
 dice_et = np.load(root + '/' +  model_name + '_dice_enhance.npy')
