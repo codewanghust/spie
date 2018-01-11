@@ -18,6 +18,7 @@ from nibabel import load as load_nii
 from sklearn.preprocessing import scale
 import matplotlib.pyplot as plt
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 # SAVE_PATH = 'unet3d_baseline.hdf5'
@@ -42,14 +43,11 @@ def parse_inputs():
     parser.add_argument('-hs', '--height-size', dest='hsize', type=int, default=38)
     parser.add_argument('-cs', '--channel-size', dest='csize', type=int, default=38)
     parser.add_argument('-ps', '--pred-size', dest='psize', type=int, default=12)
-    parser.add_argument('-nc', '--correction', dest='correction', type=bool, default=True)
-    parser.add_argument('-mn', '--model-name', dest='model_name', type=str, default='dense24')   
-    parser.add_argument('-gpu', '--gpu', dest='gpu', type=str, default='0')
+
     return vars(parser.parse_args())
 
 
 options = parse_inputs()
-os.environ["CUDA_VISIBLE_DEVICES"] = options['gpu']
 
 
 def segmentation_loss(y_true, y_pred, n_classes):
@@ -166,20 +164,13 @@ def vox_generator_test(all_files):
     while 1:
         for file in all_files:
             p = file
+            flair = load_nii(os.path.join(path, p, p + '_flair.nii.gz')).get_data()
 
-            if options['correction']:
-                flair = load_nii(os.path.join(path, file, file + '_flair_corrected.nii.gz')).get_data()
-                t2 = load_nii(os.path.join(path, file, file + '_t2_corrected.nii.gz')).get_data()
-                t1 = load_nii(os.path.join(path, file, file + '_t1_corrected.nii.gz')).get_data()
-                t1ce = load_nii(os.path.join(path, file, file + '_t1ce_corrected.nii.gz')).get_data()
-            else:
+            t2 = load_nii(os.path.join(path, p, p + '_t2.nii.gz')).get_data()
 
-                flair = load_nii(os.path.join(path, file, file + '_flair.nii.gz')).get_data()
-                t2 = load_nii(os.path.join(path, file, file + '_t2.nii.gz')).get_data()
-                t1 = load_nii(os.path.join(path, file, file + '_t1.nii.gz')).get_data()
-                t1ce = load_nii(os.path.join(path, file, file + '_t1ce.nii.gz')).get_data()
+            t1 = load_nii(os.path.join(path, p, p + '_t1.nii.gz')).get_data()
 
-         
+            t1ce = load_nii(os.path.join(path, p, p + '_t1ce.nii.gz')).get_data()
             data = np.array([flair, t2, t1, t1ce])
             data = np.transpose(data, axes=[1, 2, 3, 0])
 
@@ -206,7 +197,7 @@ def main():
     CSIZE = options['csize']
     PSIZE = options['psize']
     SAVE_PATH = options['model_path']
-    model_name = options['model_name']
+
     OFFSET_PH = (HSIZE - PSIZE) / 2
     OFFSET_PW = (WSIZE - PSIZE) / 2
     OFFSET_PC = (CSIZE - PSIZE) / 2
@@ -218,16 +209,9 @@ def main():
     flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
     t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
 
-    if model_name == 'plain':
-        flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
-        t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
-    elif model_name == 'dense24':
-        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
-        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
-    elif model_name == 'dense48':
-        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
-        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
-    
+    flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
+    t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
+
     t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
     t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
 
@@ -240,7 +224,7 @@ def main():
 
     saver = tf.train.Saver()
     data_gen_test = vox_generator_test(test_files)
-    dice = []
+    dice_whole, dice_core, dice_et = [], [], []
     with tf.Session() as sess:
         saver.restore(sess, SAVE_PATH)
         for i in range(len(test_files)):
@@ -270,13 +254,37 @@ def main():
 
             pred = np.argmax(pred, axis=-1)
             pred = pred.astype(int)
-            dice_batch = dice_coef_np(y_true=y, y_pred=pred, num_classes=5)
-            dice.append(dice_batch)
-            print dice_batch
-        dice = np.array(dice)
-        print 'mean dice:'
-        print np.mean(dice, axis=0)
-        np.save(model_name, dice)
+            print 'calculating dice...'
+            whole_pred = (pred > 0).astype(int)
+            whole_gt = (y > 0).astype(int)
+            core_pred = (pred == 1).astype(int) + (pred == 4).astype(int)
+            core_gt = (y == 1).astype(int) + (y == 4).astype(int)
+            et_pred = (pred == 4).astype(int)
+            et_gt = (y == 4).astype(int)
+            dice_whole_batch = dice_coef_np(whole_gt, whole_pred, 2)
+            dice_core_batch = dice_coef_np(core_gt, core_pred, 2)
+            dice_et_batch = dice_coef_np(et_gt, et_pred, 2)
+            dice_whole.append(dice_whole_batch)
+            dice_core.append(dice_core_batch)
+            dice_et.append(dice_et_batch)
+            print dice_whole_batch
+            print dice_core_batch
+            print dice_et_batch
+
+        dice_whole = np.array(dice_whole)
+        dice_core = np.array(dice_core)
+        dice_et = np.array(dice_et)
+
+        print 'mean dice whole:'
+        print np.mean(dice_whole, axis=0)
+        print 'mean dice core:'
+        print np.mean(dice_core, axis=0)
+        print 'mean dice enhance:'
+        print np.mean(dice_et, axis=0)
+
+        np.save('dice_whole', dice_whole)
+        np.save('dice_core', dice_core)
+        np.save('dice_enhance', dice_et)
         print 'pred saved'
 
 
