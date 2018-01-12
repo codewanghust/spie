@@ -50,7 +50,9 @@ print ('================================================')
 
 print name 
 print b[:,inx].argsort()
-new = name[b[:,inx].argsort()]
+
+new  = [ name[i] for i in b[:,inx].argsort()]
+# new = name[b[:,inx].argsort()]
 
 for i in range(len(new)):
 	print new[i]
