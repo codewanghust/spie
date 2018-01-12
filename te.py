@@ -4,6 +4,14 @@ import numpy as np
 import argparse
 import os
 
+name = {}
+count = 0
+temp = []
+with open( 'gg.txt') as f:
+	for line in f:
+		count += 1 
+		if line % 6 == 1:
+			name.append(line[:-1].split(' ')[-1]) 
 
 def parse_inputs():
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
@@ -19,11 +27,6 @@ options = parse_inputs()
 model_name = options['model_name']
 root = options['root']
 inx = options['inx']
-name = []
-with open(root + '/' + 'test.txt') as f:
-        for line in f:
-            name.append(line[:-1])
-
 
 dice_whole =  np.load( root +'/'  + 'dense24_dice_whole.npy')
 dice_core = np.expand_dims(np.load( root + '/'  + 'dense24_dice_core.npy')[:,1],axis = 1)
