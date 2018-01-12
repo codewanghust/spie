@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import os
 
-name = {}
+name = []
 count = 0
 temp = []
 with open( 'gg.txt') as f:
