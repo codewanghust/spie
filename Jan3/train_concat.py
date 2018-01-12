@@ -12,8 +12,8 @@ import keras
 
 def parse_inputs():
 
-    parser = argparse.ArgumentParser(description='yyy')
-    parser.add_argument('-r', '--root-path', dest='root_path', default='/media/yue/Data/spie/Brats17TrainingData/HGG')
+    parser = argparse.ArgumentParser(description='train the model')
+    parser.add_argument('-r', '--root-path', dest='root_path', default='/media/lele/Data/spie/Brats17TrainingData/HGG')
     parser.add_argument('-sp', '--save-path', dest='save_path', default='dense24_correction')
     parser.add_argument('-lp', '--load-path', dest='load_path', default='dense24_correction')
     parser.add_argument('-ow', '--offset-width', dest='offset_w', type=int, default=12)
