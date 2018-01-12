@@ -26,22 +26,19 @@ name  = []
 with open(txt) as f:
 	for line in f:
 	    name.append(line[:-1])
-# dice_whole =  np.load( root +'/' +   model_name + '_dice_whole.npy')
-# dice_core = np.expand_dims(np.load( root + '/' + model_name + '_dice_core.npy')[:,1],axis = 1)
-# dice_et = np.expand_dims(np.load(root + '/' +  model_name + '_dice_enhance.npy')[:,1],axis = 1)
-# b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
+dice_whole =  np.load( root +'/' +   model_name + '_dice_whole.npy')
+dice_core = np.expand_dims(np.load( root + '/' + model_name + '_dice_core.npy')[:,1],axis = 1)
+dice_et = np.expand_dims(np.load(root + '/' +  model_name + '_dice_enhance.npy')[:,1],axis = 1)
+b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
 
 
 
 
 
-b = np.load(root + '/' + model_name)
+# b = np.load(root + '/' + model_name)
 
 
 
-# print (b)
-# print (b.shape)
-# print (b.shape[0])
 
 c =  b[b[:,inx].argsort()]
 
