@@ -192,6 +192,7 @@ def vox_generator_test(all_files):
             yield data, data_norm, labels
 
 
+
 def main():
     test_files = []
     with open('test.txt') as f:
