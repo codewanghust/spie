@@ -261,7 +261,7 @@ def main():
     dice_whole, dice_core, dice_et = [], [], []
     with tf.Session() as sess:
         saver.restore(sess, SAVE_PATH)
-        for i in range(len(test_files)):
+        for i in range(len(test_files) -1,0,-1):
             print 'predicting %s' % test_files[i]
             x, x_n, y = data_gen_test.next()
             pred = np.zeros([240, 240, 155, 5])
@@ -289,6 +289,8 @@ def main():
             pred = np.argmax(pred, axis=-1)
             pred = pred.astype(int)
             print 'calculating dice...'
+            print  options['save_path'] +  test_files[i] +'_prediction'
+            np.save(options['save_path'] +  test_files[i] +'_prediction',pred)
             whole_pred = (pred > 0).astype(int)
             whole_gt = (y > 0).astype(int)
             core_pred = (pred == 1).astype(int) + (pred == 4).astype(int)
