@@ -218,6 +218,8 @@ def main():
     batches_h = int(np.ceil((240 - HSIZE) / float(OFFSET_H))) + 1
     batches_c = int(np.ceil((155 - CSIZE) / float(OFFSET_C))) + 1
 
+
+
     flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
     t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
 
@@ -226,7 +228,7 @@ def main():
         
         flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
-    elif model_name == 'plain':
+    elif model_name == 'no_dense':
 
         flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
@@ -240,6 +242,7 @@ def main():
 
         flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+
     else:
         print' No such model name '
 

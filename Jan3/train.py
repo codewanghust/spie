@@ -12,8 +12,8 @@ import keras
 
 def parse_inputs():
 
-    parser = argparse.ArgumentParser(description='yyy')
-    parser.add_argument('-r', '--root-path', dest='root_path', default='/media/yue/Data/spie/Brats17TrainingData/HGG')
+    parser = argparse.ArgumentParser(description='train the model')
+    parser.add_argument('-r', '--root-path', dest='root_path', default='/media/lele/Data/spie/Brats17TrainingData/HGG')
     parser.add_argument('-sp', '--save-path', dest='save_path', default='dense24_correction')
     parser.add_argument('-lp', '--load-path', dest='load_path', default='dense24_correction')
     parser.add_argument('-ow', '--offset-width', dest='offset_w', type=int, default=12)
@@ -184,7 +184,7 @@ def train():
     if model_name == 'dense48':
         flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
-    elif model_name == 'plain':
+    elif model_name == 'no_dense':
 
         flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
@@ -254,5 +254,7 @@ def train():
             saver.save(sess, SAVE_PATH, global_step=ei)
             print 'model saved'
 
+
 if __name__ == '__main__':
+    
     train()
