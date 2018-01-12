@@ -75,8 +75,9 @@ print ('================================================')
 # print len(name)
 # print b[:,inx].argsort()
 # print len(b[:,inx].argsort())
- 
-new  = [ name[i] for i in order]
+new = []
+for i in order:
+	new.append(name[i])
 
 
 for i in range(18,len(new)):
