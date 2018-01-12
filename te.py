@@ -10,7 +10,7 @@ def parse_inputs():
     parser = argparse.ArgumentParser(description='Test different nets with 3D data.')
   
     parser.add_argument('-mn', '--model_name', dest='model_name', type=str, default='dense24')
-    parser.add_argument('-r', '--root', dest='root', type=str, default='')
+    parser.add_argument('-r', '--root', dest='root', type=str, default='/home/lchen63/project/spie/Jan3')
     parser.add_argument('-i', '--inx', dest='inx', type=int, default=1)
     parser.add_argument('-t', '--txt', dest='txt', type=str, default='/home/lchen63/project/spie/test.txt')
 
