@@ -3,7 +3,6 @@ import numpy as np
 
 import argparse
 import os
-import numpy as np
 
 
 def parse_inputs():
