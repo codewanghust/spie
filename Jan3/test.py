@@ -262,7 +262,7 @@ def main():
     dice_whole, dice_core, dice_et = [], [], []
     with tf.Session() as sess:
         saver.restore(sess, SAVE_PATH)
-        for i in range(len(test_files) -1,0,-1):
+        for i in range(len(test_files)):
             print 'predicting %s' % test_files[i]
             x, x_n, y = data_gen_test.next()
             pred = np.zeros([240, 240, 155, 5])
