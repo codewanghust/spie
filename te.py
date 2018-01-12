@@ -52,9 +52,10 @@ print b[46]
 # print (b.shape[0])
 
 c =  b[order]
-
-print (c[18:])
-print (c[18:].mean(axis=0))
+print c 
+print order
+# print (c[18:])
+# print (c[18:].mean(axis=0))
 print ('================================================')
 
 
@@ -68,10 +69,10 @@ print ('================================================')
 # print len(name)
 # print b[:,inx].argsort()
 # print len(b[:,inx].argsort())
-# new  = [ name[i] for i in b[:,inx].argsort()]
+ 
+new  = [ name[i] for i in order]
 
-# # new = name[b[:,inx].argsort()]
 
-# for i in range(18,len(new)):
-# 	print new[i]
+for i in range(0,len(new)):
+	print new[i]
 
