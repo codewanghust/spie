@@ -19,11 +19,19 @@ options = parse_inputs()
 model_name = options['model_name']
 root = options['root']
 inx = options['inx']
-txt  = root + '/test.txt'
-name  = []
-with open(txt) as f:
-	for line in f:
-	    name.append(line[:-1])
+
+
+dice_whole =  np.load( root +'/'  + 'dense24_dice_whole.npy')
+dice_core = np.expand_dims(np.load( root + '/'  + 'dense24_dice_core.npy')[:,1],axis = 1)
+dice_et = np.expand_dims(np.load(root + '/'  + 'dense24_dice_enhance.npy')[:,1],axis = 1)
+b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
+order = b[:,inx].argsort()
+
+
+
+
+
+
 dice_whole =  np.load( root +'/' +   model_name + '_dice_whole.npy')
 dice_core = np.expand_dims(np.load( root + '/' + model_name + '_dice_core.npy')[:,1],axis = 1)
 dice_et = np.expand_dims(np.load(root + '/' +  model_name + '_dice_enhance.npy')[:,1],axis = 1)
@@ -38,7 +46,7 @@ b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
 
 
 
-c =  b[b[:,inx].argsort()]
+c =  b[order]
 
 print (c[18:])
 print (c[18:].mean(axis=0))
@@ -46,14 +54,14 @@ print ('================================================')
 
 
 
-print name 
-print len(name)
-print b[:,inx].argsort()
-print len(b[:,inx].argsort())
-new  = [ name[i] for i in b[:,inx].argsort()]
+# print name 
+# print len(name)
+# print b[:,inx].argsort()
+# print len(b[:,inx].argsort())
+# new  = [ name[i] for i in b[:,inx].argsort()]
 
-# new = name[b[:,inx].argsort()]
+# # new = name[b[:,inx].argsort()]
 
-for i in range(18,len(new)):
-	print new[i]
+# for i in range(18,len(new)):
+# 	print new[i]
 
