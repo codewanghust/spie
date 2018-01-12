@@ -254,7 +254,17 @@ def train():
             saver.save(sess, SAVE_PATH, global_step=ei)
             print 'model saved'
 
-def train_base(continue_training):
+def train_base():
+    NUM_EPOCHS = options['num_epochs']
+    LOAD_PATH = options['load_path']
+    SAVE_PATH = options['save_path']
+    PSIZE = options['psize']
+    HSIZE = options['hsize']
+    WSIZE = options['wsize']
+    CSIZE = options['csize']
+    model_name= options['model_name']
+    BATCH_SIZE = options['batch_size']
+    continue_training = options['continue_training']
     files = []
     with open('train.txt') as f:
         for line in f:
@@ -277,7 +287,7 @@ def train_base(continue_training):
     data_gen_train = vox_generator(all_files=files, n_pos=300, n_neg=100)
 
     with tf.Session() as sess:
-        if continue_training:
+        if options['continue_training']:
             saver.restore(sess, LOAD_PATH)
         else:
             sess.run(tf.global_variables_initializer())
