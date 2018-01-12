@@ -48,7 +48,8 @@ print ('================================================')
 
 
 
-
+print name 
+print b[:,inx].argsort()
 new = name[b[:,inx].argsort()]
 
 for i in range(len(new)):
