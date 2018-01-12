@@ -51,7 +51,7 @@ c =  b[b[:,inx].argsort()]
 print (c[18:])
 print (c[18:].mean(axis=0))
 print ('================================================')
-c =  (np.multiply(b[:,1],b[:,2],b[:,3]).argsort())
+c =  b[np.multiply(b[:,1],b[:,2],b[:,3]).argsort()]
 print (c[18:])
 print (c[18:].mean(axis=0))
 print ('================================================')
