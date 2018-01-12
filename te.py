@@ -80,6 +80,6 @@ for i in order:
 	new.append(name[i])
 
 
-for i in range(0:18):
+for i in range(0,18):
 	print new[i]
 
