@@ -49,9 +49,11 @@ print ('================================================')
 
 
 print name 
+print len(name)
 print b[:,inx].argsort()
 print len(b[:,inx].argsort())
 new  = [ name[i] for i in b[:,inx].argsort()]
+
 # new = name[b[:,inx].argsort()]
 
 for i in range(len(new)):
