@@ -33,7 +33,9 @@ b = np.load(root + '/' + model_name)
 
 
 
-# print (b)
+print (b)
+print ('================================================')
+
 # print (b.shape)
 # print (b.shape[0])
 
@@ -44,7 +46,7 @@ print (c[18:].mean(axis=0))
 print ('================================================')
 
 
-c=  b[np.multiply(b[:,1],b[:,2],b[:,3]).argsort()]
-print (c[18:])
-print (c[18:].mean(axis=0))
-print ('================================================')
+# c=  b[np.multiply(b[:,1],b[:,2],b[:,3]).argsort()]
+# print (c[18:])
+# print (c[18:].mean(axis=0))
+# print ('================================================')
