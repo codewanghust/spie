@@ -79,6 +79,6 @@ print ('================================================')
 new  = [ name[i] for i in order]
 
 
-for i in range(0,len(new)):
+for i in range(18,len(new)):
 	print new[i]
 
