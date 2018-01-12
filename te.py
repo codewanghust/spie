@@ -10,7 +10,7 @@ temp = []
 with open( 'gg.txt') as f:
 	for line in f:
 		count += 1 
-		if line % 6 == 1:
+		if count % 6 == 1:
 			name.append(line[:-1].split(' ')[-1]) 
 
 def parse_inputs():
