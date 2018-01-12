@@ -54,6 +54,6 @@ new  = [ name[i] for i in b[:,inx].argsort()]
 
 # new = name[b[:,inx].argsort()]
 
-for i in range(18):
+for i in range(18:len(new)):
 	print new[i]
 
