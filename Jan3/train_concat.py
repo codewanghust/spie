@@ -184,7 +184,7 @@ def train():
     if model_name == 'dense48':
         flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
-    elif model_name == 'plain':
+    elif model_name == 'no_dense':
 
         flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
         t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
@@ -254,5 +254,57 @@ def train():
             saver.save(sess, SAVE_PATH, global_step=ei)
             print 'model saved'
 
+def train_base(continue_training):
+    files = []
+    with open('train.txt') as f:
+        for line in f:
+            files.append(line[:-1])
+    print '%d training samples' % len(files)
+
+    data_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 4))
+    label_node = tf.placeholder(dtype=tf.int32, shape=(None, PSIZE, PSIZE, PSIZE))
+
+    
+    logits = tf_models.BraTS2ScaleDenseNet(input=data_node, num_labels=5)
+    loss = segmentation_loss(y_true=label_node, y_pred=logits, n_classes=5)
+    acc_batch = acc_tf(y_pred=logits, y_true=label_node)
+
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(update_ops):
+        optimizer = tf.train.AdamOptimizer(learning_rate=5e-5).minimize(loss)
+
+    saver = tf.train.Saver(max_to_keep=15)
+    data_gen_train = vox_generator(all_files=files, n_pos=300, n_neg=100)
+
+    with tf.Session() as sess:
+        if continue_training:
+            saver.restore(sess, LOAD_PATH)
+        else:
+            sess.run(tf.global_variables_initializer())
+        for ei in range(NUM_EPOCHS):
+            for pi in range(len(files)):
+                acc_pi, loss_pi = [], []
+                data, labels, centers = data_gen_train.next()
+                n_batches = int(np.ceil(float(centers.shape[1]) / BATCH_SIZE))
+                for nb in range(n_batches):
+                    offset_batch = min(nb * BATCH_SIZE, centers.shape[1] - BATCH_SIZE)
+                    data_batch, label_batch = get_patches_3d(data, labels, centers[:, offset_batch:offset_batch + BATCH_SIZE], HSIZE, WSIZE, CSIZE, PSIZE, False)
+                    _, l, acc = sess.run(fetches=[optimizer, loss, acc_batch], feed_dict={data_node:data_batch,
+                                                                          label_node:label_batch,
+                                                                          learning_phase(): 1})
+                    acc_pi.append(acc)
+                    loss_pi.append(l)
+                    n_pos = len(np.where(label_batch > 0)[0])
+                    print 'epoch-patient: %d, %d, iter: %d-%d, p%%: %.4f, loss: %.4f, acc: %.2f%%' % \
+                          (ei + 1, pi + 1, nb + 1, n_batches, n_pos/float(np.prod(label_batch.shape)), l, acc)
+
+                print 'patient loss: %.4f, patient acc: %.4f' % (np.mean(loss_pi), np.mean(acc_pi))
+
+            saver.save(sess, SAVE_PATH, global_step=ei)
+            print 'model saved'
+
 if __name__ == '__main__':
-    train()
+    if options['model_name'] == 'no_hierarchical':
+        train_base()
+    else:
+        train()
