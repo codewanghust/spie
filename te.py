@@ -46,7 +46,7 @@ b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
 
 print (b)
 print ('================================================')
-print b[37]
+print b[46]
 
 # print (b.shape)
 # print (b.shape[0])
