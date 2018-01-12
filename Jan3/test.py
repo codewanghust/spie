@@ -45,6 +45,7 @@ def parse_inputs():
     parser.add_argument('-gpu', '--gpu', dest='gpu', type=str, default='0')
     parser.add_argument('-mn', '--model_name', dest='model_name', type=str, default='dense24')
     parser.add_argument('-nc', '--correction', dest='correction', type=bool, default=True)
+    parser.add_argument('-sp', '--save_path', dest='save_path', type=str, default='/mnt/disk1/dat/lchen63/brain/data/result/')
 
 
     return vars(parser.parse_args())
