@@ -19,6 +19,10 @@ options = parse_inputs()
 model_name = options['model_name']
 root = options['root']
 inx = options['inx']
+name = []
+with open(root + '/' + 'test.txt') as f:
+        for line in f:
+            name.append(line[:-1])
 
 
 dice_whole =  np.load( root +'/'  + 'dense24_dice_whole.npy')
