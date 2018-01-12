@@ -220,9 +220,42 @@ def main():
 
 
 
-    if model_name == 'no_hierarchical':
-        data_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 4))
-    logits = tf_models.BraTS1ScaleDenseNet(input=data_node, num_labels=5)
+    flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
+    t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
+
+
+    if model_name == 'dense48':
+        
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
+    elif model_name == 'no_dense':
+
+        flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
+
+    elif model_name == 'dense24':
+
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+
+    elif model_name == 'dense24_nocorrection':
+
+        flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
+        t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
+
+    else:
+        print' No such model name '
+
+    t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
+    t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
+
+    t1_t1ce_15 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_15_cls')(t1_t1ce_15)
+    t1_t1ce_27 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_27_cls')(t1_t1ce_27)
+
+    t1_t1ce_score = t1_t1ce_15[:, 13:25, 13:25, 13:25, :] + \
+                    t1_t1ce_27[:, 13:25, 13:25, 13:25, :]
+
+
     saver = tf.train.Saver()
     data_gen_test = vox_generator_test(test_files)
     dice_whole, dice_core, dice_et = [], [], []
@@ -243,9 +276,13 @@ def main():
                         offset_pc = offset_c + OFFSET_PC
                         data = x[offset_h:offset_h + HSIZE, offset_w:offset_w + WSIZE, offset_c:offset_c + CSIZE, :]
                         data_norm = x_n[offset_h:offset_h + HSIZE, offset_w:offset_w + WSIZE, offset_c:offset_c + CSIZE, :]
+                        data_norm = np.expand_dims(data_norm, 0)
                         if not np.max(data) == 0 and np.min(data) == 0:
-                            score = sess.run(fetches=logits, feed_dict={data_node: np.expand_dims(data_norm, 0),
-                                                                        learning_phase(): 0})
+                            score = sess.run(fetches=t1_t1ce_score,
+                                             feed_dict={flair_t2_node: data_norm[:, :, :, :, :2],
+                                                        t1_t1ce_node: data_norm[:, :, :, :, 2:],
+                                                        learning_phase(): 0}
+                                             )
                             pred[offset_ph:offset_ph + PSIZE, offset_pw:offset_pw + PSIZE, offset_pc:offset_pc + PSIZE,
                             :] += np.squeeze(score)
 
@@ -283,111 +320,6 @@ def main():
         np.save(model_name + '_dice_core', dice_core)
         np.save(model_name + '_dice_enhance', dice_et)
         print 'pred saved'
-
-
-    else:
-
-
-        flair_t2_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
-        t1_t1ce_node = tf.placeholder(dtype=tf.float32, shape=(None, HSIZE, WSIZE, CSIZE, 2))
-
-
-        if model_name == 'dense48':
-            
-            flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=flair_t2_node, name='flair')
-            t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat_large(input=t1_t1ce_node, name='t1')
-        elif model_name == 'no_dense':
-
-            flair_t2_15, flair_t2_27 = tf_models.PlainCounterpart(input=flair_t2_node, name='flair')
-            t1_t1ce_15, t1_t1ce_27 = tf_models.PlainCounterpart(input=t1_t1ce_node, name='t1')
-
-        elif model_name == 'dense24':
-
-            flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
-            t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
-
-        elif model_name == 'dense24_nocorrection':
-
-            flair_t2_15, flair_t2_27 = tf_models.BraTS2ScaleDenseNetConcat(input=flair_t2_node, name='flair')
-            t1_t1ce_15, t1_t1ce_27 = tf_models.BraTS2ScaleDenseNetConcat(input=t1_t1ce_node, name='t1')
-
-        else:
-            print' No such model name '
-
-        t1_t1ce_15 = concatenate([t1_t1ce_15, flair_t2_15])
-        t1_t1ce_27 = concatenate([t1_t1ce_27, flair_t2_27])
-
-        t1_t1ce_15 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_15_cls')(t1_t1ce_15)
-        t1_t1ce_27 = Conv3D(num_labels, kernel_size=1, strides=1, padding='same', name='t1_t1ce_27_cls')(t1_t1ce_27)
-
-        t1_t1ce_score = t1_t1ce_15[:, 13:25, 13:25, 13:25, :] + \
-                        t1_t1ce_27[:, 13:25, 13:25, 13:25, :]
-
-
-        saver = tf.train.Saver()
-        data_gen_test = vox_generator_test(test_files)
-        dice_whole, dice_core, dice_et = [], [], []
-        with tf.Session() as sess:
-            saver.restore(sess, SAVE_PATH)
-            for i in range(len(test_files)):
-                print 'predicting %s' % test_files[i]
-                x, x_n, y = data_gen_test.next()
-                pred = np.zeros([240, 240, 155, 5])
-                for hi in range(batches_h):
-                    offset_h = min(OFFSET_H * hi, 240 - HSIZE)
-                    offset_ph = offset_h + OFFSET_PH
-                    for wi in range(batches_w):
-                        offset_w = min(OFFSET_W * wi, 240 - WSIZE)
-                        offset_pw = offset_w + OFFSET_PW
-                        for ci in range(batches_c):
-                            offset_c = min(OFFSET_C * ci, 155 - CSIZE)
-                            offset_pc = offset_c + OFFSET_PC
-                            data = x[offset_h:offset_h + HSIZE, offset_w:offset_w + WSIZE, offset_c:offset_c + CSIZE, :]
-                            data_norm = x_n[offset_h:offset_h + HSIZE, offset_w:offset_w + WSIZE, offset_c:offset_c + CSIZE, :]
-                            data_norm = np.expand_dims(data_norm, 0)
-                            if not np.max(data) == 0 and np.min(data) == 0:
-                                score = sess.run(fetches=t1_t1ce_score,
-                                                 feed_dict={flair_t2_node: data_norm[:, :, :, :, :2],
-                                                            t1_t1ce_node: data_norm[:, :, :, :, 2:],
-                                                            learning_phase(): 0}
-                                                 )
-                                pred[offset_ph:offset_ph + PSIZE, offset_pw:offset_pw + PSIZE, offset_pc:offset_pc + PSIZE,
-                                :] += np.squeeze(score)
-
-                pred = np.argmax(pred, axis=-1)
-                pred = pred.astype(int)
-                print 'calculating dice...'
-                whole_pred = (pred > 0).astype(int)
-                whole_gt = (y > 0).astype(int)
-                core_pred = (pred == 1).astype(int) + (pred == 4).astype(int)
-                core_gt = (y == 1).astype(int) + (y == 4).astype(int)
-                et_pred = (pred == 4).astype(int)
-                et_gt = (y == 4).astype(int)
-                dice_whole_batch = dice_coef_np(whole_gt, whole_pred, 2)
-                dice_core_batch = dice_coef_np(core_gt, core_pred, 2)
-                dice_et_batch = dice_coef_np(et_gt, et_pred, 2)
-                dice_whole.append(dice_whole_batch)
-                dice_core.append(dice_core_batch)
-                dice_et.append(dice_et_batch)
-                print dice_whole_batch
-                print dice_core_batch
-                print dice_et_batch
-
-            dice_whole = np.array(dice_whole)
-            dice_core = np.array(dice_core)
-            dice_et = np.array(dice_et)
-
-            print 'mean dice whole:'
-            print np.mean(dice_whole, axis=0)
-            print 'mean dice core:'
-            print np.mean(dice_core, axis=0)
-            print 'mean dice enhance:'
-            print np.mean(dice_et, axis=0)
-
-            np.save(model_name + '_dice_whole', dice_whole)
-            np.save(model_name + '_dice_core', dice_core)
-            np.save(model_name + '_dice_enhance', dice_et)
-            print 'pred saved'
 
 
 if __name__ == '__main__':
