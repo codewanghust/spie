@@ -21,11 +21,11 @@ root = options['root']
 inx = options['inx']
 
 
-dice_whole =  np.load( root +'/'  + 'dense24_dice_whole.npy')
-dice_core = np.expand_dims(np.load( root + '/'  + 'dense24_dice_core.npy')[:,1],axis = 1)
-dice_et = np.expand_dims(np.load(root + '/'  + 'dense24_dice_enhance.npy')[:,1],axis = 1)
-b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
-order = b[:,inx].argsort()
+# dice_whole =  np.load( root +'/'  + 'dense24_dice_whole.npy')
+# dice_core = np.expand_dims(np.load( root + '/'  + 'dense24_dice_core.npy')[:,1],axis = 1)
+# dice_et = np.expand_dims(np.load(root + '/'  + 'dense24_dice_enhance.npy')[:,1],axis = 1)
+# b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
+# order = b[:,inx].argsort()
 
 
 
@@ -46,7 +46,7 @@ b = np.concatenate((dice_whole, dice_core,dice_et), axis=1)
 
 
 
-c =  b[order]
+c =  b[b[:,inx].argsort()]
 
 print (c[18:])
 print (c[18:].mean(axis=0))
