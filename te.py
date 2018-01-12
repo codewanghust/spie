@@ -63,7 +63,7 @@ print c
 print order
 print ('================================================')
 
-print (c[:18])
+print (c[18:])
 # print (c[18:].mean(axis=0))
 print ('================================================')
 
@@ -83,6 +83,6 @@ for i in order:
 	new.append(name[i])
 
 
-for i in range(0,18):
+for i in range(18:):
 	print new[i]
 
