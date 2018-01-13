@@ -223,7 +223,7 @@ def main():
         for i in range(len(test_files)):
             print i
             print 'predicting %s' % test_files[i]
-            x, x_n, y = gen_test_data(test_files[i])
+            x, x_n, y = gen_test_data(test_files[i]-1,0,-1)
             pred = np.zeros([240, 240, 155, 5])
             for hi in range(batches_h):
                 offset_h = min(OFFSET_H * hi, 240 - HSIZE)
