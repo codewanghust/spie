@@ -93,67 +93,8 @@ def dice_coef_np(y_true, y_pred, num_classes):
     return (2. * intersection) / (np.sum(y_true, axis=0) + np.sum(y_pred, axis=0))
 
 
-def DenseNetUnit3D(x, growth_rate, ksize, n, bn_decay=0.99):
-    for i in range(n):
-        concat = x
-        x = BatchNormalization(center=True, scale=True, momentum=bn_decay)(x)
-        x = Activation('relu')(x)
-        x = Conv3D(filters=growth_rate, kernel_size=ksize, padding='same', kernel_initializer='he_uniform',
-                   use_bias=False)(x)
-        x = concatenate([concat, x])
-    return x
 
 
-def DenseNetTransit(x, rate=1, name=None):
-    if rate != 1:
-        out_features = x.get_shape().as_list()[-1] * rate
-        x = BatchNormalization(center=True, scale=True, name=name + '_bn')(x)
-        x = Activation('relu', name=name + '_relu')(x)
-        x = Conv3D(filters=out_features, kernel_size=1, strides=1, padding='same', kernel_initializer='he_normal',
-                   use_bias=False, name=name + '_conv')(x)
-    x = AveragePooling3D(pool_size=2, strides=2, padding='same')(x)
-    return x
-
-
-def dense_net(input):
-    x = Conv3D(filters=24, kernel_size=3, strides=1, kernel_initializer='he_uniform', padding='same', use_bias=False)(
-        input)
-    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
-    x = DenseNetTransit(x)
-    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
-    x = DenseNetTransit(x)
-    x = DenseNetUnit3D(x, growth_rate=12, ksize=3, n=4)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    return x
-
-
-def dense_model(patch_size, num_classes):
-    merged_inputs = Input(shape=patch_size + (4,), name='merged_inputs')
-    flair = Reshape(patch_size + (1,))(
-        Lambda(
-            lambda l: l[:, :, :, :, 0],
-            output_shape=patch_size + (1,))(merged_inputs),
-    )
-    t2 = Reshape(patch_size + (1,))(
-        Lambda(lambda l: l[:, :, :, :, 1], output_shape=patch_size + (1,))(merged_inputs)
-    )
-    t1 = Lambda(lambda l: l[:, :, :, :, 2:], output_shape=patch_size + (2,))(merged_inputs)
-
-    flair = dense_net(flair)
-    t2 = dense_net(t2)
-    t1 = dense_net(t1)
-
-    t2 = concatenate([flair, t2])
-
-    t1 = concatenate([t2, t1])
-
-    tumor = Conv3D(2, kernel_size=1, strides=1, name='tumor')(flair)
-    core = Conv3D(3, kernel_size=1, strides=1, name='core')(t2)
-    enhancing = Conv3D(num_classes, kernel_size=1, strides=1, name='enhancing')(t1)
-    net = Model(inputs=merged_inputs, outputs=[tumor, core, enhancing])
-
-    return net
 
 
 def norm(image):
