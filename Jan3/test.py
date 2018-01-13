@@ -191,7 +191,24 @@ def vox_generator_test(all_files):
             labels = load_nii(os.path.join(path, p, p + '_seg.nii.gz')).get_data()
 
             yield data, data_norm, labels
+def gen_test_data(p):
+   path = options['root_path']
+   flair = load_nii(os.path.join(path, p, p + '_flair.nii.gz')).get_data()
 
+   t2 = load_nii(os.path.join(path, p, p + '_t2.nii.gz')).get_data()
+
+   t1 = load_nii(os.path.join(path, p, p + '_t1.nii.gz')).get_data()
+
+   t1ce = load_nii(os.path.join(path, p, p + '_t1ce.nii.gz')).get_data()
+   data = np.array([flair, t2, t1, t1ce])
+   data = np.transpose(data, axes=[1, 2, 3, 0])
+
+   data_norm = np.array([norm(flair), norm(t2), norm(t1), norm(t1ce)])
+   data_norm = np.transpose(data_norm, axes=[1, 2, 3, 0])
+
+   labels = load_nii(os.path.join(path, p, p + '_seg.nii.gz')).get_data()
+
+   yield data, data_norm, labels
 
 
 def main():
@@ -264,7 +281,7 @@ def main():
         saver.restore(sess, SAVE_PATH)
         for i in range(len(test_files)):
             print 'predicting %s' % test_files[i]
-            x, x_n, y = data_gen_test.next()
+            x, x_n, y = gen_test_data(test_files[i])
             pred = np.zeros([240, 240, 155, 5])
             for hi in range(batches_h):
                 offset_h = min(OFFSET_H * hi, 240 - HSIZE)
