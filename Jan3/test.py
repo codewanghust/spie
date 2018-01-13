@@ -220,10 +220,10 @@ def main():
     dice_whole, dice_core, dice_et = [], [], []
     with tf.Session() as sess:
         saver.restore(sess, SAVE_PATH)
-        for i in range(len(test_files)):
+        for i in range(len(test_files)-1,0,-1):
             print i
             print 'predicting %s' % test_files[i]
-            x, x_n, y = gen_test_data(test_files[i]-1,0,-1)
+            x, x_n, y = gen_test_data(test_files[i])
             pred = np.zeros([240, 240, 155, 5])
             for hi in range(batches_h):
                 offset_h = min(OFFSET_H * hi, 240 - HSIZE)
