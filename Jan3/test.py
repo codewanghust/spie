@@ -149,7 +149,7 @@ def gen_test_data(p):
 
    labels = load_nii(os.path.join(path, p, p + '_seg.nii.gz')).get_data()
 
-   yield data, data_norm, labels
+   return data, data_norm, labels
 
 
 def main():
